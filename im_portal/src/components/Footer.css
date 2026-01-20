@@ -1,0 +1,73 @@
+.site-footer {
+  position: relative;
+  z-index: 5; /* must be above fixed overlay */
+  margin-top: 60px;
+  background: rgba(7, 45, 44, 0.92);
+  backdrop-filter: blur(4px);
+  color: #e9f6f5;
+}
+
+.footer-inner {
+  width: min(1100px, 92%);
+  margin: 0 auto;
+  padding: 26px 0;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 28px;
+}
+
+.brand-title {
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.brand-sub {
+  font-size: 12px;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
+.footer-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.footer-link {
+  display: block;
+  margin: 8px 0;
+  font-size: 12px;
+  color: rgba(233, 246, 245, 0.85);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.footer-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+  font-size: 11px;
+  padding: 12px 0;
+  opacity: 0.85;
+}
+
+@media (max-width: 900px) {
+  .footer-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.site-footer {
+  position: relative;
+  z-index: 5;   /* higher than overlay */
+}

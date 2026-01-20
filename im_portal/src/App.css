@@ -1,0 +1,35 @@
+.home-hero {
+  height: 100vh;
+  background-image: url("./assets/home-bg.jpg");
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.home-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 90, 120, 0.65);
+}
+
+.home-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  text-align: center;
+}
+
+.home-content h1 {
+  font-size: 42px;
+  font-weight: 800;
+}
+
+.home-content p {
+  margin-top: 10px;
+  max-width: 800px;
+}

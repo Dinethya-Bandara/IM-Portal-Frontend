@@ -1,0 +1,35 @@
+.gradient-btn {
+  padding: 16px 36px;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+
+  /* 🎨 gradient like the image */
+  background: linear-gradient(
+    90deg,
+    #55c1b3 0%,
+    #2fa79b 40%,
+    #0e5c58 100%
+  );
+
+  color: white;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  padding: 10px 40px;
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s ease;
+}
+
+/* hover effect */
+.gradient-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* click effect */
+.gradient-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
