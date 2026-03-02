@@ -17,8 +17,10 @@
   display: flex;
   justify-content: center;
 
-  align-items: flex-start;   /* ✅ move content to top */
-  padding-top: 120px;        /* ✅ control how far from top */
+  align-items: flex-start;
+  /* ✅ move content to top */
+  padding-top: 120px;
+  /* ✅ control how far from top */
 }
 
 
@@ -39,7 +41,7 @@
   color: white;
   padding: 20px;
 
-  transform: translateY(-10px); 
+  transform: translateY(-10px);
 }
 
 .home-content h1 {
@@ -113,7 +115,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 45px;
   align-items: start;
-  
+
 }
 
 /* titles */
@@ -161,7 +163,58 @@
   }
 }
 
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
 
 
+/* Utility Components */
+.input-field {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  outline: none;
+  width: 100%;
+  color: #1e293b;
+  transition: all 0.2s;
+}
 
+.input-field:focus {
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 2px #14b8a644;
+}
 
+.btn-primary {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background-color: #0d9488;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #0f766e;
+}
+
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  background-color: #f1f5f9;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #e2e8f0;
+}

@@ -1,7 +1,105 @@
-import Home from "./pages/Home.jsx";
+import { Routes, Route } from "react-router-dom";
+
 import "./App.css";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import CreateAccount from "./pages/CreateAccount";
+import Otp from "./pages/Otp";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import ResetSuccessful from "./pages/ResetSuccessful";
+
+import StudentDashboard from "./pages/StudentDashboard";
+import LecturerDashboard from "./pages/LecturerDashboard";
+import JuniorStaffDashboard from "./pages/JuniorStaffDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+
+import RegPassword from "./pages/RegPassword";
+import CalendarPage from "./pages/CalendarPage";
+import TimetablePage from "./pages/TimetablePage";
+import ExamPreferences from "./pages/ExamPreferences";
+import SubmitFeedback from "./pages/SubmitFeedback";
+import Directory from "./pages/Directory";
+import GPACalculator from "./pages/GPACalculator";
+import Notifications from "./pages/Notifications";
+import Profile from "./pages/Profile";
+import LecturerFeedback from "./pages/LecturerFeedback";
+import LecturerProfile from "./pages/LecturerProfile";
+import JuniorStaffProfile from "./pages/JuniorStaffProfile";
+import EditTimetable from "./pages/EditTimetable";
+
+import RequirePermission from "./components/RequirePermission";
 
 export default function App() {
-  return <Home />;
-}
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
 
+      {/* Admin-only page (add protection later if needed) */}
+      <Route path="/create-account" element={<CreateAccount />} />
+
+      <Route path="/student-register-password" element={<RegPassword />} />
+      <Route path="/otp" element={<Otp />} />
+
+      {/* Password reset flow */}
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/reset-success" element={<ResetSuccessful />} />
+
+      {/* Protected dashboards */}
+      <Route
+        path="/student-dashboard"
+        element={
+          <RequirePermission permission="student.view">
+            <StudentDashboard />
+          </RequirePermission>
+        }
+      />
+
+      <Route
+        path="/lecturer-dashboard"
+        element={
+          <RequirePermission permission="lecturer.view">
+            <LecturerDashboard />
+          </RequirePermission>
+        }
+      />
+
+      <Route
+        path="/junior-staff-dashboard"
+        element={
+          <RequirePermission permission="staff.view">
+            <JuniorStaffDashboard />
+          </RequirePermission>
+        }
+      />
+
+      <Route
+        path="/admin-dashboard"
+        element={
+          <RequirePermission permission="admin.view">
+            <AdminDashboard />
+          </RequirePermission>
+        }
+      />
+
+      {/* Student portal pages (you can protect them too later) */}
+      <Route path="/calendar" element={<CalendarPage />} />
+      <Route path="/timetable" element={<TimetablePage />} />
+      <Route path="/exam-preferences" element={<ExamPreferences />} />
+      <Route path="/feedback" element={<SubmitFeedback />} />
+      <Route path="/directory" element={<Directory />} />
+      <Route path="/gpa-calculator" element={<GPACalculator />} />
+      <Route path="/notifications" element={<Notifications />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/lecturer-feedback" element={<LecturerFeedback />} />
+      <Route path="/lecturer-profile" element={<LecturerProfile />} />
+      <Route path="/junior-staff-profile" element={<JuniorStaffProfile />} />
+      <Route path="/edit-timetable" element={<EditTimetable />} />
+    </Routes>
+  );
+}

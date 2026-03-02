@@ -1,67 +1,84 @@
-import "./Footer.css";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import logo from "../assets/logo.png";
+import { useNavigate } from "react-router-dom";
 
 export default function Footer() {
-  const location = useLocation();
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const goToSection = (id) => {
-    if (location.pathname !== "/") {
-      navigate("/");
-      setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-      }, 80);
-    } else {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    }
-  };
+  useEffect(() => {
+    const checkAdmin = () => {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed.email === "admin@kln.ac.lk") {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (e) {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdmin();
+    // Listen for storage changes in case of login/logout
+    window.addEventListener("userProfileUpdate", checkAdmin);
+    return () => window.removeEventListener("userProfileUpdate", checkAdmin);
+  }, []);
 
   return (
-    <footer className="site-footer">
-      <div className="footer-inner">
-        <div className="footer-col footer-brand">
-          <div className="brand-title">IM PORTAL</div>
-          <div className="brand-sub">
-            Department of Industrial Management,
-            <br />
-            University of Kelaniya
+    <div className="w-full bg-[#072d2c]/95 backdrop-blur-sm text-white py-10 px-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+
+        {/* Column 1: Logo & Info */}
+        <div className="flex flex-col items-start">
+          <div className="flex items-center gap-3 mb-4">
+            <img src={logo} alt="IM Portal" className="h-10 w-auto" />
+            <span className="font-bold text-lg">IM PORTAL</span>
           </div>
+          <p className="text-sm text-gray-400">
+            Department of Industrial Management,<br />
+            University of Kelaniya
+          </p>
         </div>
 
-        <div className="footer-col">
-          <div className="footer-title">Quick Links</div>
-          <button className="footer-link" onClick={() => goToSection("homeTop")}>
-            Home
-          </button>
-          <button className="footer-link" onClick={() => goToSection("about")}>
-            About
-          </button>
-          <button className="footer-link" onClick={() => goToSection("contact")}>
-            Contact
-          </button>
+        {/* Column 2: Quick Links */}
+        <div className="flex flex-col">
+          <h3 className="font-bold text-lg mb-4">Quick Links</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li className="cursor-pointer hover:text-white" onClick={() => navigate("/")}>Home</li>
+            <li className="cursor-pointer hover:text-white" onClick={() => {
+              navigate("/");
+              setTimeout(() => document.getElementById("about-us")?.scrollIntoView({ behavior: "smooth" }), 100);
+            }}>About</li>
+            <li className="cursor-pointer hover:text-white">Events</li>
+            <li className="cursor-pointer hover:text-white">Contact</li>
+          </ul>
         </div>
 
-        <div className="footer-col">
-          <div className="footer-title">Portal Access</div>
-          <Link className="footer-link" to="/student-login">
-            Student Login
-          </Link>
-          <Link className="footer-link" to="/lecturer-login">
-            Lecturer Login
-          </Link>
-          <Link className="footer-link" to="/staff-login">
-            Staff Login
-          </Link>
-          <Link className="footer-link" to="/register">
-            Register
-          </Link>
+        {/* Column 3: Portal Access */}
+        <div className="flex flex-col">
+          <h3 className="font-bold text-lg mb-4">Portal Access</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li className="cursor-pointer hover:text-white" onClick={() => navigate("/login")}>Student Login</li>
+            <li className="cursor-pointer hover:text-white" onClick={() => navigate("/login")}>Lecturer Login</li>
+            <li className="cursor-pointer hover:text-white" onClick={() => navigate("/login")}>Junior Staff Login</li>
+            {isAdmin && (
+              <li className="cursor-pointer hover:text-white" onClick={() => navigate("/create-account")}>Register</li>
+            )}
+          </ul>
         </div>
+
       </div>
 
-      <div className="footer-bottom">
-        © {new Date().getFullYear()} Department of Industrial Management, University
-        of Kelaniya. All rights reserved.
+      <div className="border-t border-gray-700 mt-8 pt-6 text-center text-xs text-gray-400">
+        © {new Date().getFullYear()} Department of Industrial Management, University of Kelaniya. All rights reserved.
       </div>
-    </footer>
+    </div>
   );
 }
