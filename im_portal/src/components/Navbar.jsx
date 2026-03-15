@@ -72,13 +72,11 @@ export default function Navbar() {
           text="Login"
           className="px-8 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-all shadow-md shadow-teal-600/10"
         />
-        {isAdmin && (
-          <PrimaryButton
-            onClick={() => navigate("/create-account")}
-            text="Sign Up"
-            className="px-8 py-2.5 border-2 border-teal-600 text-teal-600 hover:bg-teal-50 font-bold rounded-xl transition-all"
-          />
-        )}
+        <PrimaryButton
+          onClick={() => navigate("/details-form")}
+          text="Details Form"
+          className="px-8 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-all shadow-md shadow-teal-600/10"
+        />
       </div>
     </div>
   );

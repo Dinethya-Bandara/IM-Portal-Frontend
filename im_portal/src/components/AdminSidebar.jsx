@@ -19,12 +19,13 @@ const CalendarIcon = (p) => <IconBase {...p}><rect x="3" y="4" width="18" height
 const BarChartIcon = (p) => <IconBase {...p}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></IconBase>;
 const ShieldIcon   = (p) => <IconBase {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></IconBase>;
 const LogoutIcon   = (p) => <IconBase {...p}><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></IconBase>;
+const CheckCircleIcon = (p) => <IconBase {...p}><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></IconBase>;
 
 const ClockIcon    = (p) => <IconBase {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v6l4 2" /></IconBase>;
 
 const adminNavItems = [
   { label: "Overview",        icon: HomeIcon,     path: "/admin-dashboard" },
-  { label: "Register User",   icon: UserPlusIcon, path: "/create-account" },
+  { label: "User Approvals",  icon: CheckCircleIcon, path: "/admin-approvals" },
   { label: "Timetable",       icon: ClockIcon,    path: "/admin-timetable" },
   { label: "User Directory",  icon: UsersIcon,    path: "/admin-directory" },
   { label: "Notifications",   icon: BellIcon,     path: "/admin-notifications" },

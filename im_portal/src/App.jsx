@@ -3,7 +3,6 @@ import { Routes, Route } from "react-router-dom";
 import "./App.css";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import CreateAccount from "./pages/CreateAccount";
 import Otp from "./pages/Otp";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -19,6 +18,8 @@ import AdminNotifications from "./pages/AdminNotifications";
 import AdminCalendarPage from "./pages/AdminCalendarPage";
 import AdminTimetablePage from "./pages/AdminTimetablePage";
 import AdminReports from "./pages/AdminReports";
+import DetailsForm from "./pages/DetailsForm";
+import AdminUserApprovals from "./pages/AdminUserApprovals";
 
 import RegPassword from "./pages/RegPassword";
 import CalendarPage from "./pages/CalendarPage";
@@ -41,9 +42,6 @@ export default function App() {
       {/* Public routes */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
-
-      {/* Admin-only page (add protection later if needed) */}
-      <Route path="/create-account" element={<CreateAccount />} />
 
       <Route path="/student-register-password" element={<RegPassword />} />
       <Route path="/otp" element={<Otp />} />
@@ -135,6 +133,18 @@ export default function App() {
           </RequirePermission>
         }
       />
+
+      <Route
+        path="/admin-approvals"
+        element={
+          <RequirePermission permission="admin.view">
+            <AdminUserApprovals />
+          </RequirePermission>
+        }
+      />
+
+      {/* Publicly accessible details form */}
+      <Route path="/details-form" element={<DetailsForm />} />
 
       {/* Student portal pages (you can protect them too later) */}
       <Route path="/calendar" element={<CalendarPage />} />

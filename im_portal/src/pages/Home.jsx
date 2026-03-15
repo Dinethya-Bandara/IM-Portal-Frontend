@@ -32,11 +32,14 @@ export default function Home() {
             Department of Industrial Management, Faculty of Science,
             University of Kelaniya
           </p>
-          <div className="home-buttons mt-12 ">
+          <div className="home-buttons mt-12 flex gap-4">
             <button onClick={() => navigate("/login")}>Login to Portal</button>
-            {isAdmin && (
-              <button onClick={() => navigate("/create-account")}>Create Account</button>
-            )}
+            <button 
+              onClick={() => navigate("/details-form")}
+              className="bg-white/20 hover:bg-white/30 text-white border-2 border-white/50 backdrop-blur-sm"
+            >
+              Details Form
+            </button>
           </div>
           <div className="flex flex-col items-center my-10">
             <h3 id="about-us" className="text-xl font-semibold my-4">ABOUT US</h3>
