@@ -64,7 +64,7 @@ export default function CreateAccount() {
         <div className="w-full max-w-5xl rounded-xl bg-white shadow-2xl relative">
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/admin-dashboard")}
             className="absolute left-6 top-6 text-4xl text-slate-400 hover:text-slate-600"
           >
             ‹
