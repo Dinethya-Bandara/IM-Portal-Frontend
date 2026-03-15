@@ -5,6 +5,7 @@ import TimetableCell from "../components/TimetableCell";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import AddModulePopup from "../components/AddModulePopup";
 
 export default function AdminTimetablePage() {
   const navigate = useNavigate();
@@ -23,8 +24,7 @@ export default function AdminTimetablePage() {
 
   const [examForm, setExamForm] = useState({ date: "", day: "", time: "", moduleCode: "", moduleName: "", venue: "" });
   const [cellForm, setCellForm] = useState({
-    moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", venue: "", credits: "",
-    color: "bg-teal-50 border-teal-500 text-teal-900"
+    isLunchBreak: false, moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", stream: "All", category: "Compulsory", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900"
   });
 
   useEffect(() => {
@@ -72,17 +72,43 @@ export default function AdminTimetablePage() {
     const key = `${day}-${time.split(":")[0]}`;
     setEditCellKey(key);
     setShowEditModal(true);
-    setCellForm({ moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
+    setCellForm({ isLunchBreak: false, moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", stream: "All", category: "Compulsory", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
   };
 
   const saveAcademicEntry = () => {
-    if (!cellForm.moduleCode) return;
+    let entryColor;
+    let entryData;
+
+    if (cellForm.isLunchBreak) {
+        entryColor = "bg-yellow-100 border-yellow-400 text-yellow-800";
+        entryData = {
+            moduleCode: "",
+            moduleName: "Lunch Break",
+            lecturer: "",
+            type: "Lunch",
+            stream: "All",
+            category: "Compulsory",
+            venue: "",
+            credits: "",
+            color: entryColor
+        };
+    } else {
+        if (!cellForm.moduleCode) return;
+        const colorMap = {
+            "Lecture": "bg-teal-50 border-teal-500 text-teal-900",
+            "Lab": "bg-blue-50 border-blue-500 text-blue-900",
+            "Tutorial": "bg-purple-50 border-purple-500 text-purple-900"
+        };
+        entryColor = colorMap[cellForm.type] || colorMap["Lecture"];
+        entryData = { ...cellForm, color: entryColor };
+    }
+
     const current = academicData[editCellKey] || [];
-    const updated = { ...academicData, [editCellKey]: [...current, { ...cellForm }] };
+    const updated = { ...academicData, [editCellKey]: [...current, entryData] };
     setAcademicData(updated);
     const bk = selectedBatch.replace(/[\/\s]/g, "_");
     localStorage.setItem(`timetable_academic_${bk}`, JSON.stringify(updated));
-    setCellForm({ moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
+    setCellForm({ isLunchBreak: false, moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", stream: "All", category: "Compulsory", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
     setShowEditModal(false);
   };
 
@@ -261,43 +287,17 @@ export default function AdminTimetablePage() {
         </main>
 
         {/* Academic slot modal */}
-        {showEditModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-              <h3 className="text-xl font-bold text-slate-900 mb-1">Time Slot Details</h3>
-              <p className="text-sm text-slate-500 mb-4 capitalize">{editCellKey?.replace("-", " ")}:00</p>
-              <div className="space-y-3 mb-6">
-                {(academicData[editCellKey] || []).map((entry, idx) => (
-                  <div key={idx} className="p-3 border border-slate-200 rounded-lg bg-slate-50 relative group">
-                    <div className="font-bold text-slate-800">{entry.moduleCode} - {entry.moduleName}</div>
-                    <div className="text-xs text-slate-500">{entry.lecturer}</div>
-                    <button onClick={() => deleteAcademicEntry(idx)}
-                      className="absolute top-2 right-2 text-red-500 hover:text-red-700 bg-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
-                  </div>
-                ))}
-                {(academicData[editCellKey] || []).length === 0 && <p className="text-sm text-slate-400 italic">No modules assigned.</p>}
-              </div>
-              <div className="border-t border-slate-100 pt-4">
-                <h4 className="font-semibold text-sm text-slate-700 mb-3">Add Module</h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 bg-white" placeholder="Course Code" value={cellForm.moduleCode} onChange={e => setCellForm({ ...cellForm, moduleCode: e.target.value })} />
-                  <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 bg-white" placeholder="Module Name" value={cellForm.moduleName} onChange={e => setCellForm({ ...cellForm, moduleName: e.target.value })} />
-                  <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 bg-white col-span-2" placeholder="Lecturer Name" value={cellForm.lecturer} onChange={e => setCellForm({ ...cellForm, lecturer: e.target.value })} />
-                  <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white" value={cellForm.type} onChange={e => setCellForm({ ...cellForm, type: e.target.value })}>
-                    <option>Lecture</option><option>Lab</option><option>Tutorial</option>
-                  </select>
-                  <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 bg-white" placeholder="Color class" value={cellForm.color} onChange={e => setCellForm({ ...cellForm, color: e.target.value })} />
-                </div>
-                <button onClick={saveAcademicEntry} className="w-full bg-teal-600 text-white py-2 rounded-lg font-medium hover:bg-teal-700">Add Entry</button>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button onClick={() => setShowEditModal(false)} className="text-slate-500 hover:text-slate-800 text-sm">Close</button>
-              </div>
-            </div>
-          </div>
-        )}
+        <AddModulePopup
+            showModal={showEditModal}
+            setShowModal={setShowEditModal}
+            editCellKey={editCellKey}
+            academicData={academicData}
+            canEdit={true}
+            cellForm={cellForm}
+            setCellForm={setCellForm}
+            saveAcademicEntry={saveAcademicEntry}
+            deleteAcademicEntry={deleteAcademicEntry}
+        />
 
         {/* Exam add modal */}
         {showExamModal && (
