@@ -5,6 +5,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import FormField from "../components/FormField";
 import { useNavigate } from "react-router-dom";
 import { can, getPortal } from "../auth/permissions";
+import { getModules } from "../api/moduleApi";
 
 export default function ExamPreferences() {
     const navigate = useNavigate();
@@ -17,14 +18,7 @@ export default function ExamPreferences() {
         level: "Level 2"
     });
 
-    // Mock Database of Modules
-    const [dbModules, setDbModules] = useState([
-        { id: 1, code: "IM2001", name: "Operations Management", level: "Level 2" },
-        { id: 2, code: "IM2003", name: "Supply Chain Management", level: "Level 2" },
-        { id: 3, code: "IM2004", name: "Statistics for Management", level: "Level 2" },
-        { id: 4, code: "IM2002", name: "Quality Management", level: "Level 2" },
-        { id: 5, code: "IM2005", name: "Financial Management", level: "Level 2" },
-    ]);
+    // Removed static dbModules array; replaced with dynamic fetch
 
     // Student Form State
     const [modules, setModules] = useState([]);
@@ -53,14 +47,63 @@ export default function ExamPreferences() {
     const submissions = mockSubmissionsDB[selectedBatch] || [];
 
     useEffect(() => {
+        let currentUser = user;
         const savedUser = localStorage.getItem("user");
         if (savedUser) {
             try {
                 const parsed = JSON.parse(savedUser);
                 setUser(prev => ({ ...prev, ...parsed }));
+                currentUser = { ...user, ...parsed };
             } catch (e) { }
         }
-        setModules(dbModules);
+
+        const fetchAndFilterModules = async () => {
+            try {
+                // Try fetching from the DB
+                const data = await getModules();
+                filterAndSetModules(data, currentUser.level);
+            } catch (error) {
+                // Fallback to mock data if backend api/modules doesn't exist yet
+                console.warn("Backend not found, using fallback modules");
+                const fallbackModules = [
+                    { id: 1, moduleCode: "INTE 21243", moduleName: "Operations Management" },
+                    { id: 2, moduleCode: "INTE 21253", moduleName: "Supply Chain Management" },
+                    { id: 3, moduleCode: "INTE 21262", moduleName: "Statistics for Management" },
+                    { id: 4, moduleCode: "INTE 11243", moduleName: "Introduction to IT" },
+                    { id: 5, moduleCode: "INTE 31243", moduleName: "Advanced Databases" },
+                ];
+                filterAndSetModules(fallbackModules, currentUser.level);
+            }
+        };
+
+        const filterAndSetModules = (allModules, studentLevelStr) => {
+            // E.g. "Level 2" -> "2"
+            const studentLevelDigit = studentLevelStr ? studentLevelStr.replace(/\D/g, "") : "2";
+            const currentSemester = "1"; // Defaulting to Semester 1 for now
+
+            const filtered = allModules.filter(m => {
+                const code = m.moduleCode || m.code || "";
+                // Match prefix followed by space, then 5 digits. Groups: 1=Level, 2=Sem, 3=Credits
+                // Example: INTE 21243 -> Level: 2, Sem: 1, Credits: 3
+                const match = code.match(/^[A-Z]+\s*(\d)(\d)\d{2}(\d)$/i);
+                if (match) {
+                    const level = match[1];
+                    const sem = match[2];
+                    // Only show modules matching the student's level and current semester
+                    return level === studentLevelDigit && sem === currentSemester;
+                }
+                return false;
+            });
+
+            // Standardize keys for the UI
+            setModules(filtered.map(m => ({
+                id: m.id || m.moduleId,
+                code: m.moduleCode || m.code,
+                name: m.moduleName || m.name
+            })));
+        };
+
+        fetchAndFilterModules();
     }, []);
 
     const portal = getPortal(user.role || user.position);

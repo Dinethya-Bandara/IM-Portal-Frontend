@@ -47,10 +47,13 @@ export default function TimetablePage() {
 
     // Academic Edit Form
     const [cellForm, setCellForm] = useState({
+        isLunchBreak: false,
         moduleCode: "",
         moduleName: "",
         lecturer: "",
         type: "Lecture", // Lecture/Lab/Tutorial
+        stream: "All", // IT/MIT/All
+        category: "Compulsory", // Compulsory/Optional
         venue: "",
         credits: "",
         color: "bg-teal-50 border-teal-500 text-teal-900"
@@ -131,19 +134,46 @@ export default function TimetablePage() {
         setEditCellKey(key);
         setEditingEntryIndex(null);
         setShowEditModal(true);
-        setCellForm({ moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
+        setCellForm({ isLunchBreak: false, moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", stream: "All", category: "Compulsory", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
     };
 
     const saveAcademicEntry = () => {
         if (!canEdit) return;
-        if (!cellForm.moduleCode) return;
+
+        let entryColor;
+        let entryData;
+
+        if (cellForm.isLunchBreak) {
+            entryColor = "bg-yellow-100 border-yellow-400 text-yellow-800";
+            entryData = {
+                moduleCode: "",
+                moduleName: "Lunch Break",
+                lecturer: "",
+                type: "Lunch",
+                stream: "All",
+                category: "Compulsory",
+                venue: "",
+                credits: "",
+                color: entryColor
+            };
+        } else {
+            if (!cellForm.moduleCode) return;
+            const colorMap = {
+                "Lecture": "bg-teal-50 border-teal-500 text-teal-900",
+                "Lab": "bg-blue-50 border-blue-500 text-blue-900",
+                "Tutorial": "bg-purple-50 border-purple-500 text-purple-900"
+            };
+            entryColor = colorMap[cellForm.type] || colorMap["Lecture"];
+            entryData = { ...cellForm, color: entryColor };
+        }
+
         const currentEntries = academicData[editCellKey] || [];
-        const newEntries = [...currentEntries, { ...cellForm }];
+        const newEntries = [...currentEntries, entryData];
         const updatedData = { ...academicData, [editCellKey]: newEntries };
         setAcademicData(updatedData);
         const batchKeyStr = selectedBatch.replace(/[\/\s]/g, '_');
         localStorage.setItem(`timetable_academic_${batchKeyStr}`, JSON.stringify(updatedData));
-        setCellForm({ moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
+        setCellForm({ isLunchBreak: false, moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", stream: "All", category: "Compulsory", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
         setShowEditModal(false);
     };
 
@@ -215,8 +245,8 @@ export default function TimetablePage() {
                             <div className="flex items-center gap-2 text-slate-800">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 <div>
-                                    <h2 className="text-lg font-bold">Timetable Viewer</h2>
-                                    <p className="text-sm text-slate-500">View academic and exam timetables</p>
+                                    <h2 className="text-lg font-bold">Timetable</h2>
+                                    <p className="text-sm text-slate-500">View and manage academic and exam timetables</p>
                                 </div>
                             </div>
 
@@ -273,29 +303,16 @@ export default function TimetablePage() {
                                         const isLunch = time === "12:00";
                                         const nextTime = timeSlots[idx + 1] || "17:00";
 
-                                        if (isLunch) {
-                                            return (
-                                                <div key={time} className="grid grid-cols-[100px_1fr] bg-yellow-50/50 border-b border-slate-200 h-[60px]">
-                                                    <div className="p-2 text-xs font-semibold text-slate-500 border-r border-slate-200 flex items-center justify-center text-center">
-                                                        {time} - {nextTime}<br />Lunch
-                                                    </div>
-                                                    <div className="flex items-center justify-center text-sm font-medium text-slate-400 italic">
-                                                        Lunch Break
-                                                    </div>
-                                                </div>
-                                            )
-                                        }
-
                                         return (
                                             <div key={time} className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-slate-200 last:border-b-0">
-                                                <div className="p-2 text-xs font-semibold text-slate-500 border-r border-slate-200 flex items-center justify-center">
+                                                <div className={`p-2 text-xs font-semibold text-slate-500 border-r border-slate-200 flex items-center justify-center text-center ${isLunch ? 'bg-yellow-50/50' : ''}`}>
                                                     {time} - {nextTime}
                                                 </div>
                                                 {days.map(day => {
                                                     const key = `${day}-${time.split(':')[0]}`;
                                                     const entries = academicData[key] || [];
                                                     return (
-                                                        <div key={key} className="relative min-h-[80px]">
+                                                        <div key={key} className={`relative min-h-[80px] ${isLunch ? 'bg-yellow-50/10' : ''}`}>
                                                             <TimetableCell
                                                                 entries={entries}
                                                                 onClick={() => handleCellClick(day, time)}
@@ -382,8 +399,14 @@ export default function TimetablePage() {
                             <div className="space-y-3 mb-6">
                                 {(academicData[editCellKey] || []).map((entry, idx) => (
                                     <div key={idx} className="p-3 border border-slate-200 rounded-lg bg-slate-50 relative group">
-                                        <div className="font-bold text-slate-800">{entry.moduleCode} - {entry.moduleName}</div>
-                                        <div className="text-xs text-slate-500">{entry.lecturer} | Credits: {entry.credits || entry.moduleCode?.split('').pop()}</div>
+                                        {entry.type === "Lunch" ? (
+                                            <div className="font-bold text-slate-800 italic">{entry.moduleName}</div>
+                                        ) : (
+                                            <>
+                                                <div className="font-bold text-slate-800">{entry.moduleCode} - {entry.moduleName}</div>
+                                                <div className="text-xs text-slate-500">{entry.lecturer} | {entry.stream || "All"} ({entry.category || "Compulsory"}) {entry.venue ? `| Venue: ${entry.venue} ` : ''}| Credits: {entry.credits || entry.moduleCode?.split('').pop()}</div>
+                                            </>
+                                        )}
                                         {canEdit && (
                                             <button
                                                 onClick={() => deleteAcademicEntry(idx)}
@@ -400,17 +423,34 @@ export default function TimetablePage() {
                             {canEdit ? (
                                 <div className="border-t border-slate-100 pt-4">
                                     <h4 className="font-semibold text-sm text-slate-700 mb-3">Add Module</h4>
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Course Code" value={cellForm.moduleCode} onChange={e => setCellForm({ ...cellForm, moduleCode: e.target.value })} />
-                                        <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Module Name" value={cellForm.moduleName} onChange={e => setCellForm({ ...cellForm, moduleName: e.target.value })} />
-                                        <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm col-span-2" placeholder="Lecturer Name" value={cellForm.lecturer} onChange={e => setCellForm({ ...cellForm, lecturer: e.target.value })} />
-                                        <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm" value={cellForm.type} onChange={e => setCellForm({ ...cellForm, type: e.target.value })}>
-                                            <option>Lecture</option>
-                                            <option>Lab</option>
-                                            <option>Tutorial</option>
-                                        </select>
-                                        <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="Color Class" value={cellForm.color} onChange={e => setCellForm({ ...cellForm, color: e.target.value })} />
+                                    
+                                    <div className="mb-4 flex items-center gap-2">
+                                        <input type="checkbox" id="lunchBreakCheck" className="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500" checked={cellForm.isLunchBreak} onChange={e => setCellForm({...cellForm, isLunchBreak: e.target.checked})} />
+                                        <label htmlFor="lunchBreakCheck" className="text-sm font-bold text-slate-700">Mark this slot as a Lunch Break</label>
                                     </div>
+
+                                    {!cellForm.isLunchBreak && (
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400" placeholder="Course Code" value={cellForm.moduleCode} onChange={e => setCellForm({ ...cellForm, moduleCode: e.target.value })} />
+                                            <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400" placeholder="Module Name" value={cellForm.moduleName} onChange={e => setCellForm({ ...cellForm, moduleName: e.target.value })} />
+                                            <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 col-span-2" placeholder="Lecturer Name" value={cellForm.lecturer} onChange={e => setCellForm({ ...cellForm, lecturer: e.target.value })} />
+                                            <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800" value={cellForm.type} onChange={e => setCellForm({ ...cellForm, type: e.target.value })}>
+                                                <option value="Lecture">Lecture</option>
+                                                <option value="Lab">Lab</option>
+                                                <option value="Tutorial">Tutorial</option>
+                                            </select>
+                                            <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800" value={cellForm.stream} onChange={e => setCellForm({ ...cellForm, stream: e.target.value })}>
+                                                <option value="All">All Streams</option>
+                                                <option value="IT">IT</option>
+                                                <option value="MIT">MIT</option>
+                                            </select>
+                                            <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800" value={cellForm.category} onChange={e => setCellForm({ ...cellForm, category: e.target.value })}>
+                                                <option value="Compulsory">Compulsory</option>
+                                                <option value="Optional">Optional</option>
+                                            </select>
+                                            <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400" placeholder="Venue (e.g., A8-203)" value={cellForm.venue} onChange={e => setCellForm({ ...cellForm, venue: e.target.value })} />
+                                        </div>
+                                    )}
                                     <button onClick={saveAcademicEntry} className="w-full bg-teal-600 text-white py-2 rounded-lg font-medium hover:bg-teal-700">Add Entry</button>
                                 </div>
                             ) : (
