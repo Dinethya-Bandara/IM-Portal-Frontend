@@ -15,6 +15,7 @@ const LogInIcon = (p) => <IconBase {...p}><path d="M15 3h4a2 2 0 012 2v14a2 2 0 
 const UsersIcon = (p) => <IconBase {...p}><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2" /><circle cx="10" cy="7" r="4" /></IconBase>;
 const ActivityIcon = (p) => <IconBase {...p}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></IconBase>;
 const TrendingUpIcon = (p) => <IconBase {...p}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></IconBase>;
+const TrendingDownIcon = (p) => <IconBase {...p}><polyline points="23 18 13.5 8.5 8.5 13.5 1 6" /><polyline points="17 18 23 18 23 12" /></IconBase>;
 
 export default function AdminReports() {
   const navigate = useNavigate();
@@ -87,13 +88,14 @@ export default function AdminReports() {
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center gap-5">
-              <div className="h-14 w-14 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
-                <ActivityIcon className="h-7 w-7 text-purple-600" />
+              <div className="h-14 w-14 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                <UsersIcon className="h-7 w-7 text-red-600" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-500">Peak Usage Time</p>
+                <p className="text-sm font-semibold text-slate-500">Inactive Users</p>
                 <div className="flex items-end gap-2 mt-1">
-                  <span className="text-xl font-extrabold text-slate-800">10:00 AM</span>
+                  <span className="text-xl font-extrabold text-slate-800">114</span>
+                  <span className="text-xs font-bold text-red-500 mb-0.5 flex items-center gap-0.5"><TrendingDownIcon className="w-3 h-3" /> 2%</span>
                 </div>
               </div>
             </div>
