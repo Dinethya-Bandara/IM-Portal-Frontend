@@ -18,6 +18,7 @@ import AdminDirectory from "./pages/AdminDirectory";
 import AdminNotifications from "./pages/AdminNotifications";
 import AdminCalendarPage from "./pages/AdminCalendarPage";
 import AdminTimetablePage from "./pages/AdminTimetablePage";
+import AdminReports from "./pages/AdminReports";
 
 import RegPassword from "./pages/RegPassword";
 import CalendarPage from "./pages/CalendarPage";
@@ -122,6 +123,15 @@ export default function App() {
         element={
           <RequirePermission permission="admin.view">
             <AdminTimetablePage />
+          </RequirePermission>
+        }
+      />
+
+      <Route
+        path="/admin-reports"
+        element={
+          <RequirePermission permission="admin.view">
+            <AdminReports />
           </RequirePermission>
         }
       />

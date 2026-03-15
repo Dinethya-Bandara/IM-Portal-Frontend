@@ -91,7 +91,7 @@ export default function AdminDashboard() {
             <StatCard label="Total Users"      value="142" icon={<UsersIcon className="h-6 w-6 text-teal-600" />}    bg="bg-teal-50"    border="border-teal-100" />
             <StatCard label="Students"         value="118" icon={<CapIconS className="h-6 w-6 text-blue-600" />}     bg="bg-blue-50"    border="border-blue-100" />
             <StatCard label="Lecturers"        value="18"  icon={<BookIconS className="h-6 w-6 text-purple-600" />}  bg="bg-purple-50"  border="border-purple-100" />
-            <StatCard label="Staff Members"    value="6"   icon={<ShieldIcon className="h-6 w-6 text-orange-500" />} bg="bg-orange-50"  border="border-orange-100" />
+            <StatCard label="Junior Staff Members"    value="6"   icon={<ShieldIcon className="h-6 w-6 text-orange-500" />} bg="bg-orange-50"  border="border-orange-100" />
           </div>
 
           {/* Bottom panels */}

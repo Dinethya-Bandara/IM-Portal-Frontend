@@ -29,8 +29,7 @@ const adminNavItems = [
   { label: "User Directory",  icon: UsersIcon,    path: "/admin-directory" },
   { label: "Notifications",   icon: BellIcon,     path: "/admin-notifications" },
   { label: "Calendar",        icon: CalendarIcon, path: "/admin-calendar" },
-  { label: "Reports",         icon: BarChartIcon, path: "/admin-dashboard" },
-  { label: "System Settings", icon: ShieldIcon,   path: "/admin-dashboard" },
+  { label: "Reports",         icon: BarChartIcon, path: "/admin-reports" },
 ];
 
 export default function AdminSidebar({ userName = "Administrator", role = "Admin", onLogout }) {
