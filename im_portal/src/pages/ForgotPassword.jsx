@@ -5,11 +5,17 @@ import { useNavigate } from "react-router-dom";
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
 
-  // const handleSubmit = () => {
-  //   console.log("Send verification code to:", email);
-  //   // later: call your backend API
-  // };
+  const handleSubmit = () => {
+    if (!email.toLowerCase().endsWith("@gmail.com")) {
+      setError("Please enter a valid personal email ending with @gmail.com");
+      return;
+    }
+    setError("");
+    console.log("Send verification code to:", email);
+    navigate("/verify-email");
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#A7D9D6] flex items-center justify-center px-4 py-10">
@@ -27,7 +33,7 @@ export default function ForgotPassword() {
         </div>
 
         {/* Body */}
-        <div className="px-10 pb-10 pt-8 text-center">
+        <div className="px-10 pb-10 pt-8 text-center" onKeyDown={(e) => e.key === 'Enter' && email.trim() && handleSubmit()}>
           {/* Icon */}
           <div className="mx-auto mb-5 h-14 w-14 rounded-2xl bg-[#2FA9A0] grid place-items-center shadow">
             <MailIcon className="h-7 w-7 text-white" />
@@ -37,21 +43,29 @@ export default function ForgotPassword() {
             Reset Password
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Step 1 of 3: Enter your email address
+            Step 1 of 3: Enter your personal email address
           </p>
 
           {/* Form */}
           <div className="mt-8 text-left">
             <label className="mb-2 block text-xs font-semibold text-slate-700">
-              Email Address
+              Personal Email
             </label>
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email address"
-              className="w-full rounded-md bg-slate-100 px-4 py-2.5 text-sm text-slate-800 outline-none ring-2 ring-transparent focus:ring-teal-400"
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError("");
+              }}
+              placeholder="Enter your personal email (example@gmail.com)"
+              className={`w-full rounded-md bg-slate-100 px-4 py-2.5 text-sm text-slate-800 outline-none ring-2 transition-all ${error ? 'ring-red-400' : 'ring-transparent focus:ring-teal-400'}`}
             />
+            {error && (
+              <p className="mt-2 text-[10px] font-bold text-red-500 uppercase tracking-wider ml-1 animate-pulse">
+                {error}
+              </p>
+            )}
           </div>
 
           {/* Button */}
@@ -59,7 +73,7 @@ export default function ForgotPassword() {
             <PrimaryButton
               text="Send Verification Code"
               className="w-full py-3"
-              onClick={() => navigate("/verify-email")}
+              onClick={handleSubmit}
               disabled={!email.trim()}
             />
           </div>
