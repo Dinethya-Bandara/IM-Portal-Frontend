@@ -234,19 +234,17 @@ export default function AdminUserApprovals() {
                     {renderTable(approvedRequests, "Approved Registrations", false)}
 
                     {/* Final Action Button */}
-                    {approvedRequests.length > 0 && (
-                        <div className="flex justify-center pt-4 pb-12">
-                            <button 
-                                onClick={handleCreateAccounts}
-                                className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-lg py-5 px-12 rounded-2xl shadow-xl shadow-teal-600/20 active:scale-95 transition-all flex items-center gap-4 group"
-                            >
-                                <svg className="w-6 h-6 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                                </svg>
-                                Create User Accounts
-                            </button>
-                        </div>
-                    )}
+                    <div className="flex justify-end pt-4 pb-12">
+                        <button 
+                            onClick={handleCreateAccounts}
+                            className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-teal-600/20 active:scale-95 transition-all flex items-center gap-3 group text-sm"
+                        >
+                            <svg className="w-5 h-5 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            Create User Accounts
+                        </button>
+                    </div>
                 </main>
             </div>
         </div>
