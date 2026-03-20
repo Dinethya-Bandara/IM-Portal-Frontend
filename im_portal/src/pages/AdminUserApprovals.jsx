@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import AdminSidebar from "../components/AdminSidebar";
 import TopHeader from "../components/TopHeader";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function AdminUserApprovals() {
     const navigate = useNavigate();
@@ -18,84 +19,50 @@ export default function AdminUserApprovals() {
         loadRequests();
     }, []);
 
-    const loadRequests = () => {
-        const savedRequests = JSON.parse(localStorage.getItem("registration_requests") || "[]");
-        setRequests(savedRequests.filter(r => r.status === "pending"));
-        setApprovedRequests(savedRequests.filter(r => r.status === "approved"));
+    const BASE_URL = "http://localhost:8080";
+
+    const loadRequests = async () => {
+        try {
+            const res = await axios.get(`${BASE_URL}/api/candidates`);
+            const all = res.data;
+
+            setRequests(all.filter(r => r.status === "PENDING"));
+            setApprovedRequests(all.filter(r => r.status === "APPROVED"));
+
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const handleAction = async (id, action) => {
-        const allRequests = JSON.parse(localStorage.getItem("registration_requests") || "[]");
-        const request = allRequests.find(r => r.id === id);
-        
-        if (!request) return;
+    try {
+        const status = action === "approve" ? "APPROVED" : "REJECTED";
 
-        // Simulate an API call to the backend
-        console.log(`Processing ${action} for user: ${request.firstName} ${request.lastName}...`);
-        
-        // Update local status
-        const updatedRequests = allRequests.map(r => {
-            if (r.id === id) {
-                return { ...r, status: action === "approve" ? "approved" : "rejected" };
-            }
-            return r;
-        });
-        
-        localStorage.setItem("registration_requests", JSON.stringify(updatedRequests));
-        
-        if (action === "approve") {
-            alert(`SUCCESS: Request for ${request.firstName} ${request.lastName} moved to Approved list.`);
-        } else {
-            alert(`NOTICE: Registration request for ${request.firstName} ${request.lastName} has been rejected.`);
+        await axios.put(
+            `${BASE_URL}/api/candidates/${id}/status?status=${status}`
+        );
+
+        alert(`Candidate ${status}`);
+        loadRequests();
+
+
+    } catch (err) {
+        console.error(err);
+        alert("Error updating status");
+    }
+};
+
+    const handleCreateAccounts = async () => {
+        try {
+            const res = await axios.post(`${BASE_URL}/api/users/create-users`);
+            alert(res.data);
+
+            loadRequests();
+
+        } catch (err) {
+            console.error(err);
+            alert("Error creating users");
         }
-        
-        loadRequests();
-    };
-
-    const handleCreateAccounts = () => {
-        if (approvedRequests.length === 0) return;
-
-        const staffDirectory = JSON.parse(localStorage.getItem("staff_directory") || "[]");
-        const studentDirectory = JSON.parse(localStorage.getItem("student_directory") || "[]");
-        const allRequests = JSON.parse(localStorage.getItem("registration_requests") || "[]");
-
-        let staffAdded = 0;
-        let studentsAdded = 0;
-
-        const updatedRequests = allRequests.map(req => {
-            if (req.status === "approved") {
-                const newEntry = {
-                    id: Date.now() + Math.random(),
-                    name: `${req.firstName} ${req.lastName}`,
-                    email: req.studentEmail || req.universityEmail,
-                    phone: req.telephone,
-                    position: req.role,
-                    room: "",
-                    addedBy: user.username,
-                    isProvisioned: true
-                };
-
-                // Check if staff or student
-                const studentRoles = ["Undergraduate", "IMSSA President", "IMSSA Vice President", "Batch Representative", "Secretary", "Junior Treasurer", "Event Coordinator"];
-                if (studentRoles.includes(req.role)) {
-                    studentDirectory.push(newEntry);
-                    studentsAdded++;
-                } else {
-                    staffDirectory.push(newEntry);
-                    staffAdded++;
-                }
-
-                return { ...req, status: "provisioned" };
-            }
-            return req;
-        });
-
-        localStorage.setItem("staff_directory", JSON.stringify(staffDirectory));
-        localStorage.setItem("student_directory", JSON.stringify(studentDirectory));
-        localStorage.setItem("registration_requests", JSON.stringify(updatedRequests));
-
-        alert(`SUCCESS: Created ${staffAdded} staff and ${studentsAdded} student accounts. Approved users have been moved to the system directory.`);
-        loadRequests();
     };
 
     const renderTable = (data, title, isPending) => (
@@ -144,16 +111,16 @@ export default function AdminUserApprovals() {
                                         <div className="text-sm text-slate-700">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="text-xs font-bold text-slate-400 w-12 uppercase">Univ:</span>
-                                                <span className="font-medium text-slate-900 truncate max-w-[200px]">{req.studentEmail || req.universityEmail}</span>
+                                                <span className="font-medium text-slate-900 truncate max-w-[200px]">{req.universityEmail}</span>
                                             </div>
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="text-xs font-bold text-slate-400 w-12 uppercase">Pers:</span>
                                                 <span className="font-medium text-slate-900">{req.personalEmail}</span>
                                             </div>
-                                            {req.telephone && (
+                                            {req.contactNumber && (
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-xs font-bold text-slate-400 w-12 uppercase">Contact:</span>
-                                                    <span className="font-medium text-teal-600">{req.telephone}</span>
+                                                    <span className="font-medium text-teal-600">{req.contactNumber}</span>
                                                 </div>
                                             )}
                                         </div>
