@@ -14,7 +14,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ Extract role safely from any backend response shape
+  // Extract role safely from any backend response shape
   const extractRole = (data) => {
     // Most common shapes:
     // 1) { role: "Undergraduate" }
@@ -43,24 +43,24 @@ export default function Login() {
 
       const role = extractRole(data);
 
-      // ✅ Build a clean user object for UI
+      // Build a clean user object for UI
       const userObj = {
         email: data?.email || email,
         name: data?.name || data?.user?.name || "",
         username: data?.username || data?.user?.username || email.split("@")[0],
         batch: data?.batch || data?.user?.batch || "",
         position: data?.position || data?.user?.position || "",
-        role, // ✅ always a string roleName
+        role, 
       };
 
-      // ✅ Store
+      // Store
       localStorage.setItem("user", JSON.stringify(userObj));
       if (data?.token) localStorage.setItem("token", data.token);
       localStorage.setItem("role", role);
 
       window.dispatchEvent(new Event("userProfileUpdate"));
 
-      // ✅ Route by portal
+      // Route by portal
       const portal = getPortal(role);
 
       if (portal === "ADMIN") navigate("/admin-dashboard");

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function DetailsForm() {
     const navigate = useNavigate();
@@ -10,10 +11,9 @@ export default function DetailsForm() {
         lastName: "",
         role: "",
         studentNumber: "",
-        studentEmail: "",
         universityEmail: "",
         personalEmail: "",
-        telephone: "",
+        contactNumber: "",
         batch: "",
         level: "",
         studentIdImage: null,
@@ -38,7 +38,7 @@ export default function DetailsForm() {
         const { name, value } = e.target;
         
         // Enforce 10 digit limit for telephone/contact number
-        if (name === "telephone") {
+        if (name === "contactNumber") {
             const digits = value.replace(/\D/g, "");
             if (digits.length > 10) return;
             setFormData(prev => ({ ...prev, [name]: digits }));
@@ -98,62 +98,52 @@ export default function DetailsForm() {
     const isStudentRole = studentRoles.includes(role);
     const isStaffRole = staffRoles.includes(role);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        // --- Validations ---
-        const errors = [];
+    const errors = [];
 
-        // 1. Personal Email Validation (@gmail.com)
-        if (formData.personalEmail && !formData.personalEmail.toLowerCase().endsWith("@gmail.com")) {
-            errors.push("Personal email must use @gmail.com domain.");
+    if (formData.personalEmail && !formData.personalEmail.toLowerCase().endsWith("@gmail.com")) {
+        errors.push("Personal email must use @gmail.com domain.");
+    }
+
+    if (isStudentRole) {
+        if (!formData.universityEmail.toLowerCase().endsWith("@stu.kln.ac.lk")) {
+            errors.push("Student email must use @stu.kln.ac.lk domain.");
         }
-
-        // 2. University/Student Email Validation
-        if (isStudentRole) {
-            if (formData.studentEmail && !formData.studentEmail.toLowerCase().endsWith("@stu.kln.ac.lk")) {
-                errors.push("Student email must use @stu.kln.ac.lk domain.");
-            }
-            if (!formData.studentNumber.match(/^IM\/\d{4}\/\d{3}$/i)) {
-                errors.push("Student number must follow the format IM/2022/123.");
-            }
-        } else if (isStaffRole) {
-            if (formData.universityEmail && !formData.universityEmail.toLowerCase().endsWith("@kln.ac.lk")) {
-                errors.push("University email must use @kln.ac.lk domain.");
-            }
+        if (!formData.studentNumber.match(/^IM\/\d{4}\/\d{3}$/i)) {
+            errors.push("Student number must follow IM/2022/123.");
         }
-
-        if (formData.telephone) {
-            if (formData.telephone.length !== 10) {
-                errors.push("Contact number must contain exactly 10 digits.");
-            }
+    } else if (isStaffRole) {
+        if (!formData.universityEmail.toLowerCase().endsWith("@kln.ac.lk")) {
+            errors.push("University email must use @kln.ac.lk domain.");
         }
+    }
 
-        // 4. Image Validation for Students
-        if (isStudentRole && !formData.studentIdImage) {
-            errors.push("Please upload an image of your Student ID.");
-        }
+    if (formData.contactNumber && formData.contactNumber.length !== 10) {
+        errors.push("Contact number must be 10 digits.");
+    }
 
-        if (errors.length > 0) {
-            alert("Validation Errors:\n" + errors.join("\n"));
-            return;
-        }
-        
-        // Simulate database by using localStorage
-        const requests = JSON.parse(localStorage.getItem("registration_requests") || "[]");
-        const newRequest = {
-            ...formData,
-            id: Date.now(),
-            status: "pending",
-            submittedAt: new Date().toISOString()
-        };
-        
-        requests.push(newRequest);
-        localStorage.setItem("registration_requests", JSON.stringify(requests));
-        
-        alert("Form submitted successfully! Please wait for admin approval.");
+    if (isStudentRole && !formData.studentIdImage) {
+        errors.push("Upload Student ID.");
+    }
+
+    if (errors.length > 0) {
+        alert(errors.join("\n"));
+        return;
+    }
+
+    try {
+        await axios.post("http://localhost:8080/api/candidates", formData);
+
+        alert("Form submitted successfully!");
         navigate("/");
-    };
+
+    } catch (error) {
+        console.error(error);
+        alert("Failed to submit form");
+    }
+};
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4">
@@ -248,7 +238,7 @@ export default function DetailsForm() {
                                     <label className="text-xs font-bold text-slate-600 ml-1">Student/University Email</label>
                                     <input 
                                         type="email" 
-                                        name="studentEmail"
+                                        name="universityEmail"
                                         required
                                         placeholder="student@stu.kln.ac.lk"
                                         className="px-5 py-3.5 rounded-xl bg-slate-50 border border-slate-100 focus:border-teal-500 focus:bg-white outline-none transition-all text-slate-800 text-sm font-medium"
@@ -338,8 +328,8 @@ export default function DetailsForm() {
                                     <label className="text-xs font-bold text-slate-600 ml-1">Contact Number (Optional)</label>
                                     <input 
                                         type="tel" 
-                                        name="telephone"
-                                        value={formData.telephone}
+                                        name="contactNumber"
+                                        value={formData.contactNumber}
                                         placeholder="e.g. 0712345678"
                                         maxLength={10}
                                         className="px-5 py-3.5 rounded-xl bg-slate-50 border border-slate-100 focus:border-teal-500 focus:bg-white outline-none transition-all text-slate-800 text-sm font-medium"
