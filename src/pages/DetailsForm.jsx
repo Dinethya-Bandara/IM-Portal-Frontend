@@ -75,15 +75,11 @@ export default function DetailsForm() {
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFormData(prev => ({ 
-                    ...prev, 
-                    studentIdImage: reader.result,
-                    studentIdFileName: file.name
-                }));
-            };
-            reader.readAsDataURL(file);
+            setFormData(prev => ({ 
+                ...prev, 
+                studentIdImage: file, 
+                studentIdFileName: file.name
+            }));
         }
     };
 
@@ -99,51 +95,73 @@ export default function DetailsForm() {
     const isStaffRole = staffRoles.includes(role);
 
     const handleSubmit = async (e) => {
-    e.preventDefault();
+        e.preventDefault();
 
-    const errors = [];
+        const data = new FormData();
+        data.append("firstName", formData.firstName);
+        data.append("lastName", formData.lastName);
+        data.append("role", formData.role);
+        data.append("studentNumber", formData.studentNumber);
+        data.append("universityEmail", formData.universityEmail);
+        data.append("personalEmail", formData.personalEmail);
+        data.append("contactNumber", formData.contactNumber);
+        data.append("batch", formData.batch);
+        data.append("level", formData.level);
 
-    if (formData.personalEmail && !formData.personalEmail.toLowerCase().endsWith("@gmail.com")) {
-        errors.push("Personal email must use @gmail.com domain.");
-    }
-
-    if (isStudentRole) {
-        if (!formData.universityEmail.toLowerCase().endsWith("@stu.kln.ac.lk")) {
-            errors.push("Student email must use @stu.kln.ac.lk domain.");
+        if (formData.studentIdImage) {
+            data.append("studentIdImage", formData.studentIdImage);
         }
-        if (!formData.studentNumber.match(/^IM\/\d{4}\/\d{3}$/i)) {
-            errors.push("Student number must follow IM/2022/123.");
+
+        const errors = [];
+
+        if (formData.personalEmail && !formData.personalEmail.toLowerCase().endsWith("@gmail.com")) {
+            errors.push("Personal email must use @gmail.com domain.");
         }
-    } else if (isStaffRole) {
-        if (!formData.universityEmail.toLowerCase().endsWith("@kln.ac.lk")) {
-            errors.push("University email must use @kln.ac.lk domain.");
+
+        if (isStudentRole) {
+            if (!formData.universityEmail.toLowerCase().endsWith("@stu.kln.ac.lk")) {
+                errors.push("Student email must use @stu.kln.ac.lk domain.");
+            }
+            if (!formData.studentNumber.match(/^IM\/\d{4}\/\d{3}$/i)) {
+                errors.push("Student number must follow IM/2022/123.");
+            }
+        } else if (isStaffRole) {
+            if (!formData.universityEmail.toLowerCase().endsWith("@kln.ac.lk")) {
+                errors.push("University email must use @kln.ac.lk domain.");
+            }
         }
-    }
 
-    if (formData.contactNumber && formData.contactNumber.length !== 10) {
-        errors.push("Contact number must be 10 digits.");
-    }
+        if (formData.contactNumber && formData.contactNumber.length !== 10) {
+            errors.push("Contact number must be 10 digits.");
+        }
 
-    if (isStudentRole && !formData.studentIdImage) {
-        errors.push("Upload Student ID.");
-    }
+        if (isStudentRole && !formData.studentIdImage) {
+            errors.push("Upload Student ID.");
+        }
 
-    if (errors.length > 0) {
-        alert(errors.join("\n"));
-        return;
-    }
+        if (errors.length > 0) {
+            alert(errors.join("\n"));
+            return;
+        }
 
-    try {
-        await axios.post("http://localhost:8080/api/candidates", formData);
+        try {
+            await axios.post(
+                "http://localhost:8080/api/candidates/create",
+                data,
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data"
+                    }
+                }
+            );
 
-        alert("Form submitted successfully!");
-        navigate("/");
-
-    } catch (error) {
-        console.error(error);
-        alert("Failed to submit form");
-    }
-};
+            alert("Form submitted successfully!");
+            navigate("/");
+        } catch (error) {
+            console.error(error);
+            alert(error.response?.data?.message || "Failed to submit form");
+        }
+    };
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4">
@@ -346,7 +364,7 @@ export default function DetailsForm() {
                                 <div className="mt-2 flex items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 hover:bg-slate-100 hover:border-teal-300 transition-all cursor-pointer relative overflow-hidden group min-h-[160px]">
                                     {formData.studentIdImage ? (
                                         <div className="flex flex-col items-center w-full h-full p-4 relative z-10">
-                                            {formData.studentIdImage.startsWith("data:application/pdf") ? (
+                                            {formData.studentIdImage.type === "application/pdf" ? (
                                                 <div className="flex flex-col items-center">
                                                     <svg className="w-16 h-16 text-red-500 mb-2" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
@@ -354,7 +372,7 @@ export default function DetailsForm() {
                                                     <span className="text-sm font-bold text-slate-700 truncate max-w-[200px]">{formData.studentIdFileName}</span>
                                                 </div>
                                             ) : (
-                                                <img src={formData.studentIdImage} alt="ID Preview" className="absolute inset-0 w-full h-full object-contain p-2" />
+                                                <img src={URL.createObjectURL(formData.studentIdImage)} alt="ID Preview" className="absolute inset-0 w-full h-full object-contain p-2" />
                                             )}
                                             
                                             <button 

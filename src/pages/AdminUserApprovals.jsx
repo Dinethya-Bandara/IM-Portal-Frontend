@@ -6,7 +6,7 @@ import axios from "axios";
 
 export default function AdminUserApprovals() {
     const navigate = useNavigate();
-    const [requests, setRequests] = useState([]);
+    const [pendingRequests, setPendingRequests] = useState([]);
     const [approvedRequests, setApprovedRequests] = useState([]);
     const [user, setUser] = useState({ name: "Administrator", role: "Admin", username: "admin" });
 
@@ -23,11 +23,41 @@ export default function AdminUserApprovals() {
 
     const loadRequests = async () => {
         try {
-            const res = await axios.get(`${BASE_URL}/api/candidates`);
-            const all = res.data;
+            const pendingCand = await axios.get(`${BASE_URL}/api/candidates/getAllPending`);
 
-            setRequests(all.filter(r => r.status === "PENDING"));
-            setApprovedRequests(all.filter(r => r.status === "APPROVED"));
+            console.log("FULL RESPONSE:", JSON.stringify(pendingCand));
+
+            const allPendingCand = Array.isArray(pendingCand.data)
+                ? pendingCand.data
+                : pendingCand.data.data || pendingCand.data.content || [];
+
+            const normalize = (status) => status?.toLowerCase().trim();
+
+            console.log("Normalized Pending Requests:", allPendingCand);
+
+            setPendingRequests(
+                allPendingCand.map(r => ({
+                    ...r,
+                    status: normalize(r.status)
+                }))
+            );
+
+            console.log("Normalized Pending Requests:", pendingRequests);
+            //Approved Candidates
+            const approvedCand = await axios.get(`${BASE_URL}/api/candidates/getAllApproved`);
+
+            console.log("FULL RESPONSE:",approvedCand);
+
+            const allApprovedCand = Array.isArray(approvedCand.data)
+                ? approvedCand.data
+                : approvedCand.data.data || approvedCand.data.content || [];
+
+            setApprovedRequests(
+                allApprovedCand.map(r => ({
+                    ...r,
+                    status: normalize(r.status)
+                }))
+            );
 
         } catch (err) {
             console.error(err);
@@ -54,7 +84,7 @@ export default function AdminUserApprovals() {
 
     const handleCreateAccounts = async () => {
         try {
-            const res = await axios.post(`${BASE_URL}/api/users/create-users`);
+            const res = await axios.post(`${BASE_URL}/api/users/create_users`);
             alert(res.data);
 
             loadRequests();
@@ -76,6 +106,7 @@ export default function AdminUserApprovals() {
             {data.length === 0 ? (
                 <div className="p-12 text-center">
                     <p className="text-slate-400 text-sm italic font-medium">No registrations in this section.</p>
+                    <pre className="text-xs text-red-400 mt-2"> {JSON.stringify(data, null, 2)} </pre>
                 </div>
             ) : (
                 <div className="overflow-x-auto">
@@ -90,15 +121,18 @@ export default function AdminUserApprovals() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {data.map((req) => (
-                                <tr key={req.id} className="hover:bg-slate-50/30 transition-colors">
+                            {data.map((req) => {
+                                console.log("REQ:", req);
+
+                                return(
+                                <tr key={req.id || req.candidateId} className="hover:bg-slate-50/30 transition-colors">
                                     <td className="px-6 py-6">
                                         <div className="font-bold text-slate-900 text-base">{req.firstName} {req.lastName}</div>
                                         <div className="text-xs text-slate-400 mt-0.5 font-medium">Ref: {req.id}</div>
                                     </td>
                                     <td className="px-6 py-6 font-medium">
                                         <div className="inline-flex items-center px-3 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-bold mb-1">
-                                            {req.role}
+                                            {req.role?.roleName}
                                         </div>
                                         {(req.batch || req.level) && (
                                             <div className="text-sm text-slate-600">
@@ -126,22 +160,23 @@ export default function AdminUserApprovals() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-6 font-medium">
-                                        {req.studentIdImage ? (
+                                        {req.studentIdUrl ? (
                                             <div className="h-16 w-24 rounded-lg overflow-hidden border border-slate-200 shadow-sm relative group cursor-pointer bg-slate-50 flex items-center justify-center">
-                                                {req.studentIdImage.startsWith("data:application/pdf") ? (
+                                                {req.studentIdUrl ? (
+                                    
+                                                    <img src={req.studentIdUrl} alt="ID" className="w-full h-full object-cover" />
+                                                ) : (
                                                     <div className="flex flex-col items-center">
                                                         <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                                                             <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                                                         </svg>
                                                         <span className="text-[8px] font-bold text-slate-500 mt-1 uppercase tracking-tighter">PDF Document</span>
                                                     </div>
-                                                ) : (
-                                                    <img src={req.studentIdImage} alt="ID" className="w-full h-full object-cover" />
                                                 )}
                                                 
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                                                     <button 
-                                                        onClick={() => window.open(req.studentIdImage)}
+                                                        onClick={() => window.open(`data:image/jpeg;base64,${req.studentIdUrl}`)}
                                                         className="text-white text-[10px] font-bold"
                                                     >View Full</button>
                                                 </div>
@@ -169,7 +204,9 @@ export default function AdminUserApprovals() {
                                         </td>
                                     )}
                                 </tr>
-                            ))}
+                            
+                            );
+             })}
                         </tbody>
                     </table>
                 </div>
@@ -195,7 +232,7 @@ export default function AdminUserApprovals() {
                     </div>
 
                     {/* Pending Section */}
-                    {renderTable(requests, "Pending Registrations", true)}
+                    {renderTable(pendingRequests, "Pending Registrations", true)}
 
                     {/* Approved Section */}
                     {renderTable(approvedRequests, "Approved Registrations", false)}
