@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import PrimaryButton from "../components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import axios from "axios";
 
 
 export default function ResetPassword() {
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state?.email;
 
   const [form, setForm] = useState({
     newPassword: "",
@@ -17,15 +21,38 @@ export default function ResetPassword() {
     setForm((p) => ({ ...p, [name]: value }));
   };
 
+  const handleResetPassword = async () => {
+
+    if (!email) {
+      alert("Session expired. Please restart password reset.");
+      navigate("/forgot-password");
+      return;
+    }
+    try {
+      console.log("Sending:", form.newPassword);
+
+      const response = await axios.post(
+        "http://localhost:8080/api/users/reset-password",
+        {
+          email: email,
+          newPassword: form.newPassword,
+        }
+      );
+
+      alert(response.data);
+
+      navigate("/reset-success");
+
+    } catch (error) {
+      console.error(error);
+      alert("Reset password failed");
+    }
+  };
+
   const canSubmit =
     form.newPassword.length >= 8 &&
     form.confirmNewPassword.length >= 8 &&
     form.newPassword === form.confirmNewPassword;
-
-  // const onReset = () => {
-  //   console.log("Reset password:", form.newPassword);
-  //   // later: call backend API then navigate to login
-  // };
 
   return (
     <div className="min-h-screen w-full bg-[#A7D9D6] flex items-center justify-center px-4 py-10">
@@ -91,7 +118,7 @@ export default function ResetPassword() {
             <PrimaryButton
               text="Reset Password"
               className="w-full py-3"
-              onClick={() => navigate("/reset-success")}
+              onClick={handleResetPassword}
               disabled={!canSubmit}
             />
           </div>

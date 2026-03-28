@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../components/AdminSidebar";
+import axios from "axios";
 
 // ─── Icon helpers ──────────────────────────────────────────────────
 function IconBase({ className = "", children }) {
@@ -33,7 +34,7 @@ const CheckCircleIcon = (p) => <IconBase {...p}><path d="M22 11.08V12a10 10 0 11
 
 
 
-// ─── Main Admin Dashboard ──────────────────────────────────────────
+// ─── Main Admin Dashboard ──────────────
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
@@ -42,6 +43,18 @@ export default function AdminDashboard() {
     role: "Admin",
     username: "admin",
     email: "",
+  });
+
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    students: 0,
+    lecturers: 0,
+    juniorStaff: 0
+  });
+
+  const [studentStatus, setStudentStatus] = useState({
+    activeStudents: 0,
+    inactiveStudents: 0
   });
 
   useEffect(() => {
@@ -54,7 +67,30 @@ export default function AdminDashboard() {
         console.error("Failed to parse user", e);
       }
     }
+
+    axios.get("http://localhost:8080/api/users/stats")
+      .then(res => {
+        setStats(res.data);
+      })
+      .catch(err => {
+        console.error("Error fetching stats:", err);
+      });
+
+    axios.get("http://localhost:8080/api/users/student-status")
+    .then(res => {
+      setStudentStatus(res.data);
+    })
+    .catch(err => {
+      console.error("Error fetching student status:", err);
+    });
+
   }, []);
+
+  const totalStudents = studentStatus.activeStudents + studentStatus.inactiveStudents;
+
+  const activeRate = totalStudents > 0
+    ? Math.round((studentStatus.activeStudents / totalStudents) * 100)
+    : 0;
 
   return (
     <div className="flex min-h-screen bg-[#E9F6F5]">
@@ -88,10 +124,10 @@ export default function AdminDashboard() {
 
           {/* Stat Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard label="Total Users"      value="142" icon={<UsersIcon className="h-6 w-6 text-teal-600" />}    bg="bg-teal-50"    border="border-teal-100" />
-            <StatCard label="Students"         value="118" icon={<CapIconS className="h-6 w-6 text-blue-600" />}     bg="bg-blue-50"    border="border-blue-100" />
-            <StatCard label="Lecturers"        value="18"  icon={<BookIconS className="h-6 w-6 text-purple-600" />}  bg="bg-purple-50"  border="border-purple-100" />
-            <StatCard label="Junior Staff Members"    value="6"   icon={<ShieldIcon className="h-6 w-6 text-orange-500" />} bg="bg-orange-50"  border="border-orange-100" />
+            <StatCard label="Total Users"      value={stats.totalUsers} icon={<UsersIcon className="h-6 w-6 text-teal-600" />}    bg="bg-teal-50"    border="border-teal-100" />
+            <StatCard label="Students"         value={stats.students} icon={<CapIconS className="h-6 w-6 text-blue-600" />}     bg="bg-blue-50"    border="border-blue-100" />
+            <StatCard label="Lecturers"        value={stats.lecturers}  icon={<BookIconS className="h-6 w-6 text-purple-600" />}  bg="bg-purple-50"  border="border-purple-100" />
+            <StatCard label="Junior Staff Members"    value={stats.juniorStaff}   icon={<ShieldIcon className="h-6 w-6 text-orange-500" />} bg="bg-orange-50"  border="border-orange-100" />
           </div>
 
           {/* Bottom panels */}
@@ -111,10 +147,10 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-800">Active Users</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Level 1 – Level 3 students, all staff</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Level 1 – Level 4 students</p>
                     </div>
                   </div>
-                  <span className="text-3xl font-bold text-green-600">112</span>
+                  <span className="text-3xl font-bold text-green-600">{studentStatus.activeStudents}</span>
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-xl bg-red-50 border border-red-100">
                   <div className="flex items-center gap-3">
@@ -123,18 +159,18 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-800">Inactive Users</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Graduated 4th years — no longer active</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Out of 4th years — no longer active</p>
                     </div>
                   </div>
-                  <span className="text-3xl font-bold text-red-500">30</span>
+                  <span className="text-3xl font-bold text-red-500">{studentStatus.inactiveStudents}</span>
                 </div>
                 <div>
                   <div className="flex justify-between text-xs text-slate-500 mb-1.5">
                     <span>Active rate</span>
-                    <span className="font-semibold text-slate-700">79%</span>
+                    <span className="font-semibold text-slate-700">{activeRate}%</span>
                   </div>
                   <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full" style={{ width: "79%" }} />
+                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${activeRate}%` }} />
                   </div>
                 </div>
               </div>
