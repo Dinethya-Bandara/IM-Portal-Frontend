@@ -1,16 +1,27 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import PrimaryButton from "../components/PrimaryButton";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 export default function Otp() {
+  
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputsRef = useRef([]);
 
   const otpValue = otp.join("");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state?.email;
+
+  const [errorMessage, setErrorMessage] = useState(""); 
 
   useEffect(() => {
-    inputsRef.current?.[0]?.focus?.();
-  }, []);
+    if (!email) {
+      navigate("/");
+    }
+  }, [email, navigate]);
 
   const handleOtpChange = (index, value) => {
     const digit = value.replace(/\D/g, "").slice(-1); // keep only last digit
@@ -41,12 +52,41 @@ export default function Otp() {
     e.preventDefault();
   };
 
-  const onResend = () => {
-    console.log("Resend OTP");
+  const handleResend = async () => {
+    console.log("RESEND CLICKED");
+    await axios.post("http://localhost:8080/api/users/resend-otp",
+      null,
+      {
+        params: { email: email }
+      }
+    );
   };
 
-  const onVerify = () => {
-    console.log("Verify OTP:", otpValue);
+  const handleOtpSubmit = async () => {
+    
+    console.log("BUTTON CLICKED");
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        `http://localhost:8080/api/users/useOtp?email=${email}&otp=${otpValue}`
+      );
+
+      console.log("Response:", response.data);
+
+      if (response.data === "OTP Accepted!") {
+        setErrorMessage("");
+
+        console.log("OTP Accepted!");
+
+        navigate("/reset-password", { state: { email } });
+      }
+
+    } catch (error) {
+      console.log("Error Status:", error.response?.status);
+      console.log("Error Data:", error.response?.data);
+
+      setErrorMessage(error.response?.data || "Something went wrong");
+    }
   };
 
   return (
@@ -106,12 +146,13 @@ export default function Otp() {
                 />
               ))}
             </div>
+            {errorMessage && (<p className="mt-3 text-sm text-red-500">{errorMessage}</p>)}
 
             <p className="mt-4 text-xs text-slate-500">
               Didn&apos;t receive the code?{" "}
               <button
                 type="button"
-                onClick={onResend}
+                onClick={handleResend}
                 className="font-semibold text-blue-600 hover:underline"
               >
                 Resend OTP
@@ -129,7 +170,7 @@ export default function Otp() {
                 </span>
               }
               className="w-full py-3"
-              onClick={onVerify}
+              onClick={handleOtpSubmit}
               disabled={otpValue.length !== 6}
             />
           </div>

@@ -1,20 +1,31 @@
 import React, { useState } from "react";
 import PrimaryButton from "../components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!email.toLowerCase().endsWith("@gmail.com")) {
-      setError("Please enter a valid personal email ending with @gmail.com");
+      setError("Please enter a valid email ending with @gmail.com");
       return;
     }
     setError("");
-    console.log("Send verification code to:", email);
-    navigate("/verify-email");
+    try {
+      const response = await axios.post("http://localhost:8080/api/users/getOtp?email=" + email);
+
+      console.log("Response:", response.data);
+
+
+      navigate("/verify-email", { state: { email: email } });
+
+    } catch (err) {
+      console.error(err);
+      setError("Failed to send OTP. Try again.");
+    }
   };
 
   return (
