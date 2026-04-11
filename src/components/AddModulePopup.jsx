@@ -9,7 +9,9 @@ export default function AddModulePopup({
     cellForm,
     setCellForm,
     saveAcademicEntry,
-    deleteAcademicEntry
+    deleteAcademicEntry,
+    errorMessage,
+    setErrorMessage 
 }) {
     if (!showModal) return null;
 
@@ -31,7 +33,7 @@ export default function AddModulePopup({
                             )}
                             {canEdit && (
                                 <button
-                                    onClick={() => deleteAcademicEntry(idx)}
+                                    onClick={() => deleteAcademicEntry(entry.id)}
                                     className="absolute top-2 right-2 text-red-500 hover:text-red-700 bg-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
                                 >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -57,9 +59,9 @@ export default function AddModulePopup({
                                 <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400" placeholder="Module Name" value={cellForm.moduleName} onChange={e => setCellForm({ ...cellForm, moduleName: e.target.value })} />
                                 <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 col-span-2" placeholder="Lecturer Name" value={cellForm.lecturer} onChange={e => setCellForm({ ...cellForm, lecturer: e.target.value })} />
                                 <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800" value={cellForm.type} onChange={e => setCellForm({ ...cellForm, type: e.target.value })}>
-                                    <option value="Lecture">Lecture</option>
-                                    <option value="Lab">Lab</option>
-                                    <option value="Tutorial">Tutorial</option>
+                                    <option value="LECTURE">Lecture</option>
+                                    <option value="LAB">Lab</option>
+                                    <option value="TUTORIAL">Tutorial</option>
                                 </select>
                                 <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800" value={cellForm.stream} onChange={e => setCellForm({ ...cellForm, stream: e.target.value })}>
                                     <option value="All">All Streams</option>
@@ -73,13 +75,20 @@ export default function AddModulePopup({
                                 <input className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400" placeholder="Venue (e.g., A8-203)" value={cellForm.venue} onChange={e => setCellForm({ ...cellForm, venue: e.target.value })} />
                             </div>
                         )}
+
+                        {errorMessage && (
+                            <div className="bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded-lg text-sm mb-3">
+                                {errorMessage}
+                            </div>
+                        )}
+
                         <button onClick={saveAcademicEntry} className="w-full bg-teal-600 text-white py-2 rounded-lg font-medium hover:bg-teal-700">Add Entry</button>
                     </div>
                 ) : (
                     <p className="text-xs text-slate-400 mt-4 text-center">Only Academic Advisors can edit the timetable.</p>
                 )}
                 <div className="mt-4 flex justify-end">
-                    <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-slate-800 text-sm">Close</button>
+                    <button onClick={() => {setShowModal(false); setErrorMessage("");}} className="text-slate-500 hover:text-slate-800 text-sm">Close</button>
                 </div>
             </div>
         </div>

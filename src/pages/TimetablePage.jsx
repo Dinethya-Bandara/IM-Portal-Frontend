@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { can } from "../auth/permissions";
 import AddModulePopup from "../components/AddModulePopup";
+import axios from "axios";
 
 export default function TimetablePage() {
     const navigate = useNavigate();
@@ -24,11 +25,13 @@ export default function TimetablePage() {
 
     // View State
     const [activeTab, setActiveTab] = useState("academic"); // 'academic' | 'exam'
-    const [selectedBatch, setSelectedBatch] = useState("2022/2023");
+    const [selectedBatch, setSelectedBatch] = useState("");
+    const [batches, setBatches] = useState([]);
+    const [errorMessage, setErrorMessage] = useState("");
 
     // Data State
-    const [academicData, setAcademicData] = useState({}); // { "Monday-08": [ { moduleCode, moduleName... } ] }
-    const [examData, setExamData] = useState([]); // Array of exam entries
+    const [academicData, setAcademicData] = useState({});
+    const [examData, setExamData] = useState([]);
 
     // Modal State
     const [showEditModal, setShowEditModal] = useState(false);
@@ -60,53 +63,8 @@ export default function TimetablePage() {
         color: "bg-teal-50 border-teal-500 text-teal-900"
     });
 
-    // --- MOCK DB & LOAD ---
-    useEffect(() => {
-        const savedUser = localStorage.getItem("user");
-        if (savedUser) {
-            try { setUser(prev => ({ ...prev, ...JSON.parse(savedUser) })); } catch (e) { }
-        }
+    
 
-        const batchKeyStr = selectedBatch.replace(/[\/\s]/g, '_');
-
-        // Load Academic Data for specific batch
-        const savedAcademic = localStorage.getItem(`timetable_academic_${batchKeyStr}`);
-        if (savedAcademic) {
-            setAcademicData(JSON.parse(savedAcademic));
-        } else {
-            // Default mock data based on batch
-            if (selectedBatch === "2022/2023") {
-                setAcademicData({
-                    "Monday-08": [{ moduleCode: "INTE 22303", moduleName: "Artificial Intelligence", lecturer: "Dr. Chathura Rajapakse", type: "All", color: "bg-emerald-50 border-emerald-600 text-emerald-900" }],
-                    "Tuesday-08": [{ moduleCode: "INTE 22293", moduleName: "Software Architecture", lecturer: "Dr. Dilani Wickramaarachchi", type: "IT", color: "bg-emerald-50 border-emerald-600 text-emerald-900" }],
-                    "Wednesday-08": [{ moduleCode: "INTE 22253", moduleName: "Distributed Systems", lecturer: "Prof. Janaka Wijayanayake", type: "IT", color: "bg-emerald-50 border-emerald-600 text-emerald-900" }],
-                    "Thursday-08": [{ moduleCode: "MGTE 22263", moduleName: "Supply Chain Management", lecturer: "Dr. Chathumi Kavirathne", type: "MIT", color: "bg-emerald-50 border-emerald-600 text-emerald-900" }],
-                });
-            } else if (selectedBatch === "2021/2022") {
-                setAcademicData({
-                    "Monday-09": [{ moduleCode: "INTE 32303", moduleName: "Advanced Databases", lecturer: "Prof. S. Perera", type: "All", color: "bg-blue-50 border-blue-600 text-blue-900" }],
-                    "Friday-10": [{ moduleCode: "MGTE 32263", moduleName: "Innovation Management", lecturer: "Dr. N. Gamage", type: "MIT", color: "bg-orange-50 border-orange-600 text-orange-900" }],
-                });
-            } else {
-                setAcademicData({});
-            }
-        }
-
-        // Load Exam Data for specific batch
-        const savedExam = localStorage.getItem(`timetable_exam_${batchKeyStr}`);
-        if (savedExam) {
-            setExamData(JSON.parse(savedExam));
-        } else {
-            if (selectedBatch === "2022/2023") {
-                setExamData([
-                    { id: 1, date: "2025-12-01", day: "Monday", time: "09:00 - 12:00", moduleCode: "INTE 22303", moduleName: "Artificial Intelligence", venue: "A8 - 203" },
-                    { id: 2, date: "2025-12-03", day: "Wednesday", time: "09:00 - 12:00", moduleCode: "INTE 22343", moduleName: "Data Structures", venue: "A8 - 203" },
-                ]);
-            } else {
-                setExamData([]);
-            }
-        }
-    }, [selectedBatch]);
 
     // --- PERMISSIONS ---
     const isAcademicAdvisor = () => {
@@ -138,73 +96,166 @@ export default function TimetablePage() {
         setCellForm({ isLunchBreak: false, moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", stream: "All", category: "Compulsory", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
     };
 
-    const saveAcademicEntry = () => {
+    useEffect(() => {
+        const savedUser = localStorage.getItem("user");
+        if (savedUser) {
+            try {
+                const parsed = JSON.parse(savedUser);
+                setUser(prev => ({ ...prev, ...parsed }));
+            } catch (e) {
+                console.error("Failed to parse user", e);
+            }
+        }
+        fetchBatches();
+    }, []);
+
+    useEffect(() => {
+        if (selectedBatch) {
+            fetchAcademicTimetable();
+            fetchExamTimetable();
+        }
+    }, [selectedBatch]);
+
+    const fetchBatches = async () => {
+        try {
+            const res = await axios.get("http://localhost:8080/api/batches");
+            setBatches(res.data);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const fetchAcademicTimetable = async () => {
+        try {
+            const res = await axios.get(
+                `http://localhost:8080/api/timetable?batchId=${selectedBatch}&type=ACADEMIC`
+            );
+
+            const formatted = {};
+
+            res.data.forEach(item => {
+                const key = `${item.day}-${item.timeSlot}`;
+                if (!formatted[key]) formatted[key] = [];
+                formatted[key].push(item);
+            });
+
+            setAcademicData(formatted);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const fetchExamTimetable = async () => {
+        try {
+            const res = await axios.get(
+                `http://localhost:8080/api/timetable?batchId=${selectedBatch}&type=EXAM`
+            );
+            setExamData(res.data);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const saveAcademicEntry = async () => {
         if (!canEdit) return;
 
-        let entryColor;
-        let entryData;
+        try {
+            setErrorMessage("");
+            let entryData;
 
-        if (cellForm.isLunchBreak) {
-            entryColor = "bg-yellow-100 border-yellow-400 text-yellow-800";
-            entryData = {
-                moduleCode: "",
-                moduleName: "Lunch Break",
-                lecturer: "",
-                type: "Lunch",
-                stream: "All",
-                category: "Compulsory",
-                venue: "",
-                credits: "",
-                color: entryColor
-            };
-        } else {
-            if (!cellForm.moduleCode) return;
-            const colorMap = {
-                "Lecture": "bg-teal-50 border-teal-500 text-teal-900",
-                "Lab": "bg-blue-50 border-blue-500 text-blue-900",
-                "Tutorial": "bg-purple-50 border-purple-500 text-purple-900"
-            };
-            entryColor = colorMap[cellForm.type] || colorMap["Lecture"];
-            entryData = { ...cellForm, color: entryColor };
+            if (cellForm.isLunchBreak) {
+                entryData = {
+                    courseCode: null,
+                    day: editCellKey.split("-")[0],
+                    timeSlot: editCellKey.split("-")[1],
+                    batchId: selectedBatch,
+                    timetableType: "ACADEMIC",
+                    isLunchBreak: true
+                };
+            } else {
+                if (!cellForm.moduleCode) return;
+
+                entryData = {
+                    courseCode: cellForm.moduleCode,
+                    lectureType: cellForm.type,
+                    timetableType: "ACADEMIC",
+                    day: editCellKey.split("-")[0],
+                    timeSlot: editCellKey.split("-")[1],
+                    batchId: selectedBatch,
+                    stream: cellForm.stream,
+                    venue: cellForm.venue,
+                    isCompulsory: cellForm.category === "Compulsory",
+                    isLunchBreak: false
+                };
+            }
+
+            await axios.post("http://localhost:8080/api/timetable", entryData);
+
+            fetchAcademicTimetable();
+            setShowEditModal(false);
+
+        } catch (err) {
+            console.log("ERROR RESPONSE:", err.response?.data);
+
+            const message =
+                err.response?.data?.message ||
+                err.response?.data ||
+                "Something went wrong";
+
+            setErrorMessage(message);
+        }
+    };
+
+    const deleteAcademicEntry = async (id) => {
+        if (!canEdit) return;
+
+        await axios.delete(`http://localhost:8080/api/timetable/${id}`);
+        fetchAcademicTimetable();
+    };
+
+    const saveExamEntry = async () => {
+        if (!canEdit) return;
+
+        if (!selectedBatch) {
+            alert("Please select a batch");
+            return;
         }
 
-        const currentEntries = academicData[editCellKey] || [];
-        const newEntries = [...currentEntries, entryData];
-        const updatedData = { ...academicData, [editCellKey]: newEntries };
-        setAcademicData(updatedData);
-        const batchKeyStr = selectedBatch.replace(/[\/\s]/g, '_');
-        localStorage.setItem(`timetable_academic_${batchKeyStr}`, JSON.stringify(updatedData));
-        setCellForm({ isLunchBreak: false, moduleCode: "", moduleName: "", lecturer: "", type: "Lecture", stream: "All", category: "Compulsory", venue: "", credits: "", color: "bg-teal-50 border-teal-500 text-teal-900" });
-        setShowEditModal(false);
+        try {
+            console.log("CODE:", `"${examForm.moduleCode}"`);
+            setErrorMessage("");
+            const newItem = {
+                batchId: selectedBatch,
+                timetableType: "EXAM",
+                courseCode: examForm.moduleCode,
+                timeSlot: examForm.time,
+                venue: examForm.venue,
+                date: examForm.date,
+                day: examForm.day
+            };
+
+            await axios.post("http://localhost:8080/api/timetable", newItem);
+
+            fetchExamTimetable();
+            setShowExamModal(false);
+
+        } catch (err) {
+            console.log("ERROR RESPONSE:", err.response?.data);
+
+            const message =
+                err.response?.data?.message ||
+                err.response?.data ||
+                "Something went wrong";
+
+            setErrorMessage(message);
+        }
     };
 
-    const deleteAcademicEntry = (idx) => {
+    const deleteExamEntry = async (id) => {
         if (!canEdit) return;
-        const currentEntries = academicData[editCellKey] || [];
-        const newEntries = currentEntries.filter((_, i) => i !== idx);
-        const updatedData = { ...academicData, [editCellKey]: newEntries };
-        setAcademicData(updatedData);
-        const batchKeyStr = selectedBatch.replace(/[\/\s]/g, '_');
-        localStorage.setItem(`timetable_academic_${batchKeyStr}`, JSON.stringify(updatedData));
-    };
 
-    const saveExamEntry = () => {
-        if (!canEdit) return;
-        const newItem = { id: Date.now(), ...examForm };
-        const updated = [...examData, newItem];
-        setExamData(updated);
-        const batchKeyStr = selectedBatch.replace(/[\/\s]/g, '_');
-        localStorage.setItem(`timetable_exam_${batchKeyStr}`, JSON.stringify(updated));
-        setExamForm({ date: "", day: "", time: "", moduleCode: "", moduleName: "", venue: "" });
-        setShowExamModal(false);
-    };
-
-    const deleteExamEntry = (examId) => {
-        if (!canEdit) return;
-        const updated = examData.filter(exam => exam.id !== examId);
-        setExamData(updated);
-        const batchKeyStr = selectedBatch.replace(/[\/\s]/g, '_');
-        localStorage.setItem(`timetable_exam_${batchKeyStr}`, JSON.stringify(updated));
+        await axios.delete(`http://localhost:8080/api/timetable/${id}`);
+        fetchExamTimetable();
     };
 
     const downloadPDF = async (ref, filename) => {
@@ -255,12 +306,14 @@ export default function TimetablePage() {
                                 <select
                                     className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-teal-500"
                                     value={selectedBatch}
-                                    onChange={(e) => setSelectedBatch(e.target.value)}
-                                >
-                                    <option value="2021/2022">2021/2022 Batch</option>
-                                    <option value="2022/2023">2022/2023 Batch</option>
-                                    <option value="2023/2024">2023/2024 Batch</option>
-                                    <option value="2024/2025">2024/2025 Batch</option>
+                                    onChange={(e) => setSelectedBatch(Number(e.target.value))}>
+
+                                    <option value="">Select Batch</option>
+                                    {batches.map(batch => (
+                                        <option key={batch.id} value={batch.id}>
+                                            {batch.batch}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
@@ -402,6 +455,8 @@ export default function TimetablePage() {
                     setCellForm={setCellForm}
                     saveAcademicEntry={saveAcademicEntry}
                     deleteAcademicEntry={deleteAcademicEntry}
+                    errorMessage={errorMessage}
+                    setErrorMessage={setErrorMessage}
                 />
 
                 {showExamModal && (
@@ -418,8 +473,15 @@ export default function TimetablePage() {
                                 <input className="w-full px-4 py-3 border-2 border-slate-400 rounded-lg text-sm text-slate-900 font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="Module Name" value={examForm.moduleName} onChange={e => setExamForm({ ...examForm, moduleName: e.target.value })} />
                                 <input className="w-full px-4 py-3 border-2 border-slate-400 rounded-lg text-sm text-slate-900 font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="Venue" value={examForm.venue} onChange={e => setExamForm({ ...examForm, venue: e.target.value })} />
                             </div>
+
+                            {errorMessage && (
+                                <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm mt-4">
+                                    {errorMessage}
+                                </div>
+                            )}
+
                             <div className="flex justify-end gap-3 mt-8">
-                                <button onClick={() => setShowExamModal(false)} className="px-5 py-2.5 text-sm font-bold text-slate-700 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
+                                <button onClick={() => {setShowExamModal(false); setErrorMessage("");}} className="px-5 py-2.5 text-sm font-bold text-slate-700 border-2 border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>
                                 <button onClick={saveExamEntry} className="px-5 py-2.5 text-sm font-bold text-white bg-teal-600 rounded-lg hover:bg-teal-700 shadow-md transition-colors">Save Exam</button>
                             </div>
                         </div>
