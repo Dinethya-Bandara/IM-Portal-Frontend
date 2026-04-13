@@ -14,62 +14,105 @@ export default function AdminDirectory() {
   const [studentDirectory, setStudentDirectory] = useState([]);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", position: "", room: "" });
 
-  useEffect(() => {
-    const saved = localStorage.getItem("user");
-    if (saved) {
-      try { setUser(prev => ({ ...prev, ...JSON.parse(saved) })); } catch (e) {}
-    }
-    const savedStaff = localStorage.getItem("staff_directory");
-    if (savedStaff) {
-      setStaffDirectory(JSON.parse(savedStaff));
-    } else {
-      setStaffDirectory([
-        { id: 1, name: "Prof. R. Jayawardena", position: "Professor", email: "r.jayawardena@university.lk", phone: "+94 77 123 4567", room: "Room 301, IM Block", addedBy: "admin" },
-        { id: 2, name: "Dr. K. Silva", position: "Senior Lecturer (Academic Coordinator)", email: "k.silva@university.lk", phone: "+94 77 234 5678", room: "Room 305, IM Block", addedBy: "admin" },
-      ]);
-    }
-    const savedStudents = localStorage.getItem("student_directory");
-    if (savedStudents) setStudentDirectory(JSON.parse(savedStudents));
-  }, []);
 
-  const handleAddEntry = () => {
-    if (!formData.name || !formData.email || !formData.position) {
-      alert("Please fill in all required fields (Name, Email, Position)");
-      return;
+  const loadDirectories = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/directories/${activeTab === "staff" ? "staff" : "student"}`
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch data");
+      }
+
+      const data = await res.json();
+
+      if (activeTab === "staff") {
+        setStaffDirectory(data);
+      } else {
+        setStudentDirectory(data);
+      }
+
+    } catch (err) {
+      console.error("Error loading directories:", err);
+
+      // prevent crash
+      if (activeTab === "staff") setStaffDirectory([]);
+      else setStudentDirectory([]);
     }
-    const newEntry = { id: Date.now(), ...formData, addedBy: user.username };
-    if (activeTab === "staff") {
-      const updated = [...staffDirectory, newEntry];
-      setStaffDirectory(updated);
-      localStorage.setItem("staff_directory", JSON.stringify(updated));
-    } else {
-      const updated = [...studentDirectory, newEntry];
-      setStudentDirectory(updated);
-      localStorage.setItem("student_directory", JSON.stringify(updated));
-    }
-    setFormData({ name: "", email: "", phone: "", position: "", room: "" });
-    setShowAddModal(false);
   };
 
-  const handleDelete = (id, type) => {
-    if (!window.confirm("Are you sure you want to delete this entry?")) return;
-    if (type === "staff") {
-      const updated = staffDirectory.filter(e => e.id !== id);
-      setStaffDirectory(updated);
-      localStorage.setItem("staff_directory", JSON.stringify(updated));
+
+  useEffect(() => {
+    loadDirectories();
+  }, [activeTab]);
+
+  const handleAddEntry = async () => {
+    if (!formData.name) return alert("Please fill Name");
+    if (!formData.email) return alert("Please fill Email");
+    if (!formData.position) return alert("Please fill Position");
+    if (formData.phone) {
+      if (!/^\d{10}$/.test(formData.phone)) {
+        return alert("Phone number must be exactly 10 digits");
+      }
+    }
+
+    const payload = {
+      ...formData,
+      type: activeTab === "staff" ? "staff" : "student"
+    };
+
+    try {
+      const res = await fetch("http://localhost:8080/api/directories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
+      }
+
+      await loadDirectories();
+
+      setFormData({ name: "", email: "", phone: "", position: "", room: "" });
+      setShowAddModal(false);
+
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure?")) return;
+
+    await fetch(`http://localhost:8080/api/directories/${id}`, {
+      method: "DELETE"
+    });
+
+    if (activeTab === "staff") {
+      setStaffDirectory(prev => prev.filter(e => e.id !== id));
     } else {
-      const updated = studentDirectory.filter(e => e.id !== id);
-      setStudentDirectory(updated);
-      localStorage.setItem("student_directory", JSON.stringify(updated));
+      setStudentDirectory(prev => prev.filter(e => e.id !== id));
     }
   };
 
   const currentDirectory = activeTab === "staff" ? staffDirectory : studentDirectory;
-  const filteredDirectory = currentDirectory.filter(entry =>
-    entry.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    entry.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    entry.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredDirectory = Array.isArray(currentDirectory)
+  ? currentDirectory.filter(entry =>
+      entry.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.email.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  : [];
+
+  const openModal = () => {
+    setFormData({ name: "", email: "", phone: "", position: "", room: "" });
+    setShowAddModal(true);
+  };
 
   return (
     <div className="flex min-h-screen bg-[#E9F6F5]">
@@ -99,10 +142,10 @@ export default function AdminDirectory() {
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-0 bg-slate-100 p-1 rounded-full w-fit">
                 <button onClick={() => setActiveTab("staff")} className={`px-6 py-2 rounded-full text-sm font-semibold transition ${activeTab === 'staff' ? 'bg-white shadow text-black' : 'text-slate-500 hover:text-slate-700'}`}>Staff Directory</button>
-                <button onClick={() => setActiveTab("students")} className={`px-6 py-2 rounded-full text-sm font-semibold transition ${activeTab === 'students' ? 'bg-white shadow text-black' : 'text-slate-500 hover:text-slate-700'}`}>Student Leaders</button>
+                <button onClick={() => setActiveTab("student")} className={`px-6 py-2 rounded-full text-sm font-semibold transition ${activeTab === 'student' ? 'bg-white shadow text-black' : 'text-slate-500 hover:text-slate-700'}`}>Student Leaders</button>
               </div>
               <button
-                onClick={() => setShowAddModal(true)}
+                onClick={openModal}
                 className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
@@ -128,7 +171,7 @@ export default function AdminDirectory() {
                         <h3 className="text-lg font-bold text-slate-800">{entry.name}</h3>
                         <p className="text-sm text-slate-500">{entry.position}</p>
                       </div>
-                      <button onClick={() => handleDelete(entry.id, activeTab)} className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleDelete(entry.id)} className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       </button>
                     </div>
@@ -156,15 +199,26 @@ export default function AdminDirectory() {
             <p className="text-sm text-slate-500 mb-6">Adding to {activeTab === "staff" ? "Staff Directory" : "Student Leaders"}</p>
             <div className="space-y-4">
               {[
-                { label: "Full Name", key: "name", placeholder: activeTab === "staff" ? "e.g. Prof. John Doe" : "e.g. Kasun Perera" },
-                { label: "Position / Role", key: "position", placeholder: activeTab === "staff" ? "e.g. Senior Lecturer" : "e.g. IMSSA President" },
-                { label: "Email Address", key: "email", placeholder: "john.doe@university.lk" },
-                { label: "Phone", key: "phone", placeholder: "+94 ..." },
+                { label: "Full Name", key: "name", placeholder: activeTab === "staff" ? "Enter Your Name" : "Enter Your Name" },
+                { label: "Position / Role", key: "position", placeholder: activeTab === "staff" ? "Enter Your Role" : "Enter Your Role" },
+                { label: "Email Address", key: "email", placeholder: "Enter Your Email Address" },
+                { label: "Phone", key: "phone", placeholder: "Enter Your Contact Number" },
               ].map(f => (
                 <div key={f.key} className="space-y-1">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{f.label}</label>
                   <input className="w-full border border-slate-200 p-3 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all text-slate-800 placeholder-slate-400"
-                    placeholder={f.placeholder} value={formData[f.key]} onChange={e => setFormData({ ...formData, [f.key]: e.target.value })} />
+                    placeholder={f.placeholder} value={formData[f.key]} inputMode={f.key === "phone" ? "numeric" : "text"}
+                    onChange={e => {
+                      if (f.key === "phone") {
+                        const value = e.target.value.replace(/\D/g, ""); // remove non-digits
+                        if (value.length <= 10) {
+                          setFormData({ ...formData, phone: value });
+                        }
+                      } else {
+                        setFormData({ ...formData, [f.key]: e.target.value });
+                      }
+                    }}
+                    />
                 </div>
               ))}
               {activeTab === "staff" && (
