@@ -5,72 +5,104 @@ import { useNavigate } from "react-router-dom";
 
 export default function AdminNotifications() {
   const navigate = useNavigate();
-  const [user, setUser] = useState({ name: "Administrator", role: "Admin", username: "admin" });
+  const [user, setUser] = useState({
+    name: "Administrator",
+    role: "Admin",
+    universityEmail: "admin@kln.ac.lk" 
+  });
 
   const [notifications, setNotifications] = useState([]);
-  const [userReadStatus, setUserReadStatus] = useState({});
-  const [userDeletedIds, setUserDeletedIds] = useState([]);
   const [filterUnread, setFilterUnread] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({ title: "", message: "", category: "All Levels", priority: "Normal" });
 
   useEffect(() => {
     const saved = localStorage.getItem("user");
-    if (saved) { try { setUser(prev => ({ ...prev, ...JSON.parse(saved) })); } catch (e) {} }
-
-    const savedNotifs = localStorage.getItem("announcements");
-    if (savedNotifs) {
-      setNotifications(JSON.parse(savedNotifs));
-    } else {
-      setNotifications([
-        { id: 1, title: "Lecture Cancelled - IM2303", message: "Today's 2:00 PM Operations Research lecture has been cancelled.", from: "Academic Coordinator", category: "Level 2", priority: "High", timestamp: new Date(Date.now() - 3600000).toISOString() },
-        { id: 2, title: "Exam Timetable Updated", message: "The final examination timetable for December 2025 has been published.", from: "Academic Coordinator", category: "All Levels", priority: "High", timestamp: new Date(Date.now() - 7200000).toISOString() },
-        { id: 3, title: "IMSSA Annual General Meeting", message: "The IMSSA AGM will be held on November 25, 2025 at 5:00 PM in the Main Auditorium.", from: "IMSSA President", category: "All Levels", priority: "Normal", timestamp: new Date(Date.now() - 604800000).toISOString() },
-      ]);
+    if (saved) {
+      try {
+        setUser(prev => ({ ...prev, ...JSON.parse(saved) }));
+      } catch (e) {}
     }
-
-    const savedRead = localStorage.getItem(`read_status_admin`);
-    if (savedRead) setUserReadStatus(JSON.parse(savedRead));
-
-    const savedDeleted = localStorage.getItem(`deleted_notifications_admin`);
-    if (savedDeleted) setUserDeletedIds(JSON.parse(savedDeleted));
   }, []);
 
+  useEffect(() => {
+    if (!user.universityEmail) return;
+
+    fetch(`http://localhost:8080/api/notifications/${user.universityEmail}`)
+      .then(res => res.json())
+      .then(data => setNotifications(data));
+
+    const interval = setInterval(() => {
+      fetch(`http://localhost:8080/api/notifications/${user.universityEmail}`)
+        .then(res => res.json())
+        .then(data => setNotifications(data));
+    }, 5000);
+
+    return () => clearInterval(interval);
+
+  }, [user.universityEmail]);
+
   const handleAddAnnouncement = () => {
-    if (!announcementForm.title || !announcementForm.message) { alert("Please fill in title and message"); return; }
-    const newAnnouncement = { id: Date.now(), ...announcementForm, from: user.name, timestamp: new Date().toISOString() };
-    const updated = [newAnnouncement, ...notifications];
-    setNotifications(updated);
-    localStorage.setItem("announcements", JSON.stringify(updated));
-    setAnnouncementForm({ title: "", message: "", category: "All Levels", priority: "Normal" });
-    setShowAddModal(false);
+    if (!announcementForm.title || !announcementForm.message) {
+      alert("Please fill in title and message");
+      return;
+    }
+
+    fetch("http://localhost:8080/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: announcementForm.title,
+        message: announcementForm.message,
+        targetAudience:
+          announcementForm.category === "All Levels"
+            ? "ALL"
+            : announcementForm.category.toUpperCase().replace(" ", "_"),
+        priority: announcementForm.priority.toUpperCase(),
+        senderEmail: user.universityEmail
+      })
+    }).then(() => {
+      setShowAddModal(false);
+
+      // reload notifications
+      fetch(`http://localhost:8080/api/notifications/${user.universityEmail}`)
+        .then(res => res.json())
+        .then(data => setNotifications(data));
+    });
   };
 
   const markAsRead = (id) => {
-    const updated = { ...userReadStatus, [id]: true };
-    setUserReadStatus(updated);
-    localStorage.setItem(`read_status_admin`, JSON.stringify(updated));
+    fetch(`http://localhost:8080/api/notifications/read/${id}/${user.universityEmail}`, {
+      method: "PUT"
+    }).then(() => {
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, status: "READ" } : n)
+      );
+    });
   };
 
   const markAllAsRead = () => {
-    const updated = {};
-    visibleNotifications.forEach(n => { updated[n.id] = true; });
-    const merged = { ...userReadStatus, ...updated };
-    setUserReadStatus(merged);
-    localStorage.setItem(`read_status_admin`, JSON.stringify(merged));
+    fetch(`http://localhost:8080/api/notifications/read-all/${user.universityEmail}`, {
+      method: "PUT"
+    }).then(() => {
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, status: "READ" }))
+      );
+    });
   };
 
   const deleteNotification = (id) => {
-    const updated = [...userDeletedIds, id];
-    setUserDeletedIds(updated);
-    localStorage.setItem(`deleted_notifications_admin`, JSON.stringify(updated));
+    fetch(`http://localhost:8080/api/notifications/${id}/${user.universityEmail}`, {
+      method: "DELETE"
+    }).then(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    });
   };
 
   const visibleNotifications = notifications
-    .filter(n => !userDeletedIds.includes(n.id))
-    .filter(n => !filterUnread || !userReadStatus[n.id]);
+  .filter(n => !filterUnread || n.status !== "READ");
 
-  const unreadCount = visibleNotifications.filter(n => !userReadStatus[n.id]).length;
+  const unreadCount = notifications.filter(n => n.status !== "READ").length;
 
   const getTimeAgo = (timestamp) => {
     const diffMs = new Date() - new Date(timestamp);
@@ -82,8 +114,8 @@ export default function AdminNotifications() {
   };
 
   const getPriorityColor = (priority) => {
-    if (priority === "High") return "bg-red-100 text-red-700 border-red-200";
-    if (priority === "Urgent") return "bg-orange-100 text-orange-700 border-orange-200";
+    if (priority === "HIGH") return "bg-red-100 text-red-700 border-red-200";
+    if (priority === "URGENT") return "bg-orange-100 text-orange-700 border-orange-200";
     return "bg-blue-100 text-blue-700 border-blue-200";
   };
 
@@ -92,7 +124,7 @@ export default function AdminNotifications() {
       <AdminSidebar userName={user.name} role={user.role} onLogout={() => { localStorage.clear(); navigate("/"); }} />
 
       <div className="flex-1 flex flex-col min-h-screen">
-        <TopHeader title="Notifications" username={user.username} subtitle="Admin Portal" />
+        <TopHeader title="Notifications" username={user.universityEmail} subtitle="Admin Portal" />
 
         <main className="p-8 flex-1 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-sm p-8 max-w-7xl mx-auto">
@@ -143,7 +175,7 @@ export default function AdminNotifications() {
             ) : (
               <div className="space-y-4">
                 {visibleNotifications.map(notification => {
-                  const isRead = userReadStatus[notification.id];
+                  const isRead = notification.status === "READ";
                   return (
                     <div key={notification.id} className={`p-5 rounded-xl border transition-all ${isRead ? 'bg-white border-slate-100' : 'bg-blue-50/50 border-blue-100'}`}>
                       <div className="flex items-start justify-between mb-3">
@@ -154,16 +186,16 @@ export default function AdminNotifications() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-bold text-slate-800">{notification.title}</h3>
-                              {notification.priority !== "Normal" && (
+                              {notification.priority !== "NORMAL" && (
                                 <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getPriorityColor(notification.priority)}`}>{notification.priority}</span>
                               )}
                               {!isRead && <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs font-bold">New</span>}
                             </div>
                             <p className="text-sm text-slate-600 leading-relaxed mb-2">{notification.message}</p>
                             <div className="flex items-center gap-4 text-xs text-slate-400">
-                              <span>From: {notification.from}</span><span>•</span>
-                              <span>{notification.category}</span><span>•</span>
-                              <span>{getTimeAgo(notification.timestamp)}</span>
+                              <span>From: {notification.senderName}</span><span>•</span>
+                              <span>{notification.targetAudience.replace("_", " ")}</span><span>•</span>
+                              <span>{getTimeAgo(notification.createdAt)}</span>
                             </div>
                           </div>
                         </div>
