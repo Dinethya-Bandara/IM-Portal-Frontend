@@ -24,8 +24,25 @@ export default function CalendarPage() {
     const [selectedDateForAdd, setSelectedDateForAdd] = useState(null);
     const [newEvent, setNewEvent] = useState({ title: "", description: "" });
 
+    const fetchEvents = async () => {
+        try {
+            const res = await fetch(`http://localhost:8080/api/calendar/type/${activeTab}`);
+
+            if (!res.ok) {
+                console.error("API error:", res.status);
+                setEvents([]);
+                return;
+            }
+
+            const data = await res.json();
+            setEvents(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error("Error fetching events", err);
+            setEvents([]);
+        }
+    };
+
     useEffect(() => {
-        // Load User
         const savedUser = localStorage.getItem("user");
         if (savedUser) {
             try {
@@ -35,12 +52,9 @@ export default function CalendarPage() {
                 console.error("Failed to parse user", e);
             }
         }
-        // Load Events from Local Storage (Previous behavior)
-        const savedEvents = localStorage.getItem("calendar_events");
-        if (savedEvents) {
-            setEvents(JSON.parse(savedEvents));
-        }
-    }, []);
+
+        fetchEvents();
+    }, [activeTab]);
 
     // --- DATE HELPERS ---
     const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
@@ -73,31 +87,47 @@ export default function CalendarPage() {
         setShowAddModal(true);
     };
 
-    const handleAddEvent = () => {
+    const handleAddEvent = async () => {
         if (!newEvent.title || !selectedDateForAdd) return;
 
-        const item = {
-            id: Date.now(),
-            date: selectedDateForAdd.toISOString(),
+        const payload = {
             title: newEvent.title,
             description: newEvent.description,
-            color: newEvent.color || "bg-blue-100 text-blue-800", // Default color
-            type: activeTab
+            color: newEvent.color,
+            date: selectedDateForAdd.toISOString().split("T")[0],
+            calendarType: activeTab
         };
 
-        const updated = [...events, item];
-        setEvents(updated);
-        localStorage.setItem("calendar_events", JSON.stringify(updated));
+        try {
+            await fetch("http://localhost:8080/api/calendar", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
 
-        setNewEvent({ title: "", description: "", color: "" });
-        setShowAddModal(false);
+            setNewEvent({ title: "", description: "", color: "" });
+            setShowAddModal(false);
+
+            fetchEvents(); // 🔥 refresh UI
+        } catch (err) {
+            console.error("Error saving event", err);
+        }
     };
 
-    const handleDeleteEvent = (e, id) => {
-        e.stopPropagation(); // prevent opening modal
-        const updated = events.filter(e => e.id !== id);
-        setEvents(updated);
-        localStorage.setItem("calendar_events", JSON.stringify(updated));
+    const handleDeleteEvent = async (e, id) => {
+        e.stopPropagation();
+
+        try {
+            await fetch(`http://localhost:8080/api/calendar/${id}`, {
+                method: "DELETE"
+            });
+
+            fetchEvents();
+        } catch (err) {
+            console.error("Error deleting event", err);
+        }
     };
 
 
@@ -121,12 +151,18 @@ export default function CalendarPage() {
         // Days
         for (let day = 1; day <= daysInMonth; day++) {
             const currentCellDate = new Date(year, month, day);
+
             const dateStr = currentCellDate.toDateString();
-            // Filter events for this day & active tab
-            const dayEvents = events.filter(e => {
-                const eDate = new Date(e.date);
-                return eDate.toDateString() === dateStr && e.type === activeTab;
-            });
+
+            const cellDate = new Date(year, month, day)
+                .toISOString()
+                .split("T")[0];
+
+            const dayEvents = events.filter(
+                e =>
+                    e.date === cellDate &&
+                    e.calendarType === activeTab
+            );
 
             // Current day highlight
             const isToday = new Date().toDateString() === dateStr;
