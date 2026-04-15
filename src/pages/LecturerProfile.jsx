@@ -12,9 +12,7 @@ export default function LecturerProfile() {
     const [user, setUser] = useState({
         name: "",
         email: "",
-        contact: "",
         role: "Lecturer",
-        position: "Senior Lecturer",
         about: "No description added yet",
         profileImage: "", // Base64 or URL
     });
@@ -24,29 +22,49 @@ export default function LecturerProfile() {
     const [tempImage, setTempImage] = useState("");
 
     useEffect(() => {
-        const savedUser = localStorage.getItem("user");
-        if (savedUser) {
-            try {
-                const parsed = JSON.parse(savedUser);
-                const merged = { ...user, ...parsed };
-                setUser(merged);
-                setTempName(merged.name);
-                setTempImage(merged.profileImage);
-            } catch (e) {
-                console.error("Failed to parse user data", e);
-            }
-        }
+        const personalEmail = JSON.parse(localStorage.getItem("user"))?.email;
+
+        fetch(`http://localhost:8080/api/profile?personalEmail=${personalEmail}`)
+            .then(res => res.json())
+            .then(data => {
+                setUser({
+                    name: data.fullName,
+                    email: data.email,
+                    role: data.role,
+                    profileImage: data.profileImage,
+                    about: "No description added yet"
+                });
+
+                setTempName(data.fullName);
+                setTempImage(data.profileImage);
+            })
+            .catch(err => console.error(err));
     }, []);
 
     const handleSave = () => {
-        const updatedUser = { ...user, name: tempName, profileImage: tempImage };
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+        const personalEmail = JSON.parse(localStorage.getItem("user"))?.email;
 
-        // Dispatch event to update Sidebar and TopHeader
-        window.dispatchEvent(new Event("userProfileUpdate"));
+        fetch(`http://localhost:8080/api/profile?personalEmail=${personalEmail}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                fullName: tempName,
+                profileImage: tempImage
+            })
+        })
+        .then(() => {
+            setUser(prev => ({
+                ...prev,
+                name: tempName,
+                profileImage: tempImage
+            }));
 
-        setIsEditing(false);
+            setIsEditing(false);
+            window.dispatchEvent(new Event("userProfileUpdate"));
+        })
+        .catch(err => console.error(err));
     };
 
     const handleImageChange = (e) => {
@@ -67,7 +85,6 @@ export default function LecturerProfile() {
             <Sidebar
                 userName={user.name}
                 role={user.role}
-                position={user.position}
                 portalName={portalName}
                 onLogout={() => {
                     localStorage.clear();
@@ -189,21 +206,8 @@ export default function LecturerProfile() {
                                     className="bg-slate-50 cursor-not-allowed italic font-medium"
                                 />
                                 <FormField
-                                    label="Contact Number"
-                                    value={user.contact || ""}
-                                    disabled={true}
-                                    className="bg-slate-50 cursor-not-allowed italic font-medium"
-                                    placeholder="No contact added"
-                                />
-                                <FormField
                                     label="Role"
                                     value={user.role}
-                                    disabled={true}
-                                    className="bg-slate-50 cursor-not-allowed italic font-medium"
-                                />
-                                <FormField
-                                    label="Departmental Position"
-                                    value={user.position || "Senior Lecturer"}
                                     disabled={true}
                                     className="bg-slate-50 cursor-not-allowed italic font-medium"
                                 />

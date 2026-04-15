@@ -101,7 +101,15 @@ export default function Sidebar({
   if (isJuniorStaff) rawItems = juniorStaffNavItems;
   else if (isLecturerPortal) rawItems = lecturerNavItems;
 
-  const checkRole = (isLecturerPortal && position) ? position : role;
+  let checkRole = role;
+
+  if (role?.toLowerCase().includes("junior")) {
+    checkRole = "staff";
+  } else if (role?.toLowerCase().includes("lecturer")) {
+    checkRole = "lecturer";
+  } else if (role?.toLowerCase().includes("student")) {
+    checkRole = "student";
+  }
 
   const navItems = rawItems.filter(item => {
     if (!item.permission) return true;
