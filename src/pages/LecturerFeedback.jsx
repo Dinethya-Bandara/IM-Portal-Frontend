@@ -13,54 +13,35 @@ export default function LecturerFeedback() {
         username: "Nuwan"
     });
 
-    const [allFeedbacks, setAllFeedbacks] = useState([
-        {
-            id: 1,
-            category: "Teaching Quality",
-            isNew: true,
-            date: "10/15/2025",
-            text: "The lectures are very informative and well-structured. However, it would be great if more practical examples could be included to help us understand the real-world applications better.",
-            color: "blue"
-        },
-        {
-            id: 2,
-            category: "Facilities & Resources",
-            isNew: true,
-            date: "10/14/2025",
-            text: "The computer lab needs more updated software for our industrial management simulations. Some of the current software versions are outdated and cause compatibility issues.",
-            color: "purple"
-        },
-        {
-            id: 3,
-            category: "Timetable & Scheduling",
-            isNew: false,
-            date: "10/13/2025",
-            text: "There are often clashes between lecture schedules and lab sessions. It would be helpful if the timetable could be better coordinated to avoid these conflicts.",
-            color: "yellow"
-        },
-        {
-            id: 4,
-            category: "Assessment & Evaluation",
-            isNew: false,
-            date: "10/12/2025",
-            text: "Could we have more frequent formative assessments? They really help us track our progress and identify areas we need to work on before the final exams.",
-            color: "pink"
-        }
-    ]);
+    const [allFeedbacks, setAllFeedbacks] = useState([]);
 
     const [selectedFeedback, setSelectedFeedback] = useState(null);
 
     useEffect(() => {
         const savedUser = localStorage.getItem("user");
+
         if (savedUser) {
             try {
-                setUser(JSON.parse(savedUser));
-            } catch (e) { }
-        }
+                const parsedUser = JSON.parse(savedUser);
+                setUser(parsedUser);
 
-        const savedFeedbacks = localStorage.getItem("anonymous_feedbacks");
-        if (savedFeedbacks) {
-            // merge with mock for demo if empty
+                // ✅ FETCH HERE (after user is ready)
+                fetch(`http://localhost:8080/api/feedback?username=${parsedUser.username}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const formatted = data.map(f => ({
+                            id: f.id,
+                            text: f.message,
+                            date: new Date(f.createdAt).toLocaleDateString(),
+                            isNew: !f.read,
+                            category: "General",
+                            color: "blue"
+                        }));
+
+                        setAllFeedbacks(formatted);
+                    });
+
+            } catch (e) {}
         }
     }, []);
 
@@ -126,10 +107,10 @@ export default function LecturerFeedback() {
 
                         {/* Filters Row */}
                         <div className="flex gap-4 mb-5">
-                            <select className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9InN0YXRlLTRMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI2IDkgMTIgMTUgMTggOSI+PC9wb2x5bGluZT48L3N2Zz4=')] bg-[length:16px] bg-[95%_center] bg-no-repeat">
+                            <select className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none">
                                 <option>All Categories</option>
                             </select>
-                            <select className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9InN0YXRlLTRMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI2IDkgMTIgMTUgMTggOSI+PC9wb2x5bGluZT48L3N2Zz4=')] bg-[length:16px] bg-[95%_center] bg-no-repeat">
+                            <select className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none">
                                 <option>All Feedback</option>
                             </select>
                         </div>
@@ -163,7 +144,22 @@ export default function LecturerFeedback() {
                                         {fb.text}
                                     </p>
                                     <button
-                                        onClick={() => setSelectedFeedback(fb)}
+                                        onClick={async () => {
+                                            setSelectedFeedback(fb);
+
+                                            if (fb.isNew) {
+                                                await fetch(`http://localhost:8080/api/feedback/${fb.id}/read?username=${user.username}`, {
+                                                    method: "PUT"
+                                                });
+
+                                                // update UI instantly
+                                                setAllFeedbacks(prev =>
+                                                    prev.map(item =>
+                                                        item.id === fb.id ? { ...item, isNew: false } : item
+                                                    )
+                                                );
+                                            }
+                                        }}
                                         className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-sm transition-colors"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
