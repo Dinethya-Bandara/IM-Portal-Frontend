@@ -15,11 +15,8 @@ export default function AdminCalendarPage() {
   const [newEvent, setNewEvent] = useState({ title: "", description: "", color: "" });
 
   useEffect(() => {
-    const saved = localStorage.getItem("user");
-    if (saved) { try { setUser(prev => ({ ...prev, ...JSON.parse(saved) })); } catch (e) {} }
-    const savedEvents = localStorage.getItem("calendar_events");
-    if (savedEvents) setEvents(JSON.parse(savedEvents));
-  }, []);
+    fetchEvents();
+  }, [activeTab]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -38,28 +35,48 @@ export default function AdminCalendarPage() {
     setShowAddModal(true);
   };
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     if (!newEvent.title || !selectedDateForAdd) return;
-    const item = {
-      id: Date.now(),
-      date: selectedDateForAdd.toISOString(),
+
+    const payload = {
       title: newEvent.title,
       description: newEvent.description,
-      color: newEvent.color || "bg-blue-100 text-blue-800",
-      type: activeTab
+      color: newEvent.color,
+      date: selectedDateForAdd.toISOString().split("T")[0],
+      calendarType: activeTab
     };
-    const updated = [...events, item];
-    setEvents(updated);
-    localStorage.setItem("calendar_events", JSON.stringify(updated));
-    setNewEvent({ title: "", description: "", color: "" });
-    setShowAddModal(false);
+
+    try {
+      await fetch("http://localhost:8080/api/calendar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      setNewEvent({ title: "", description: "", color: "" });
+      setShowAddModal(false);
+
+      fetchEvents(); // refresh UI
+    } catch (err) {
+      console.error("Error saving event", err);
+    }
   };
 
-  const handleDeleteEvent = (e, id) => {
+  const handleDeleteEvent = async (e, id) => {
     e.stopPropagation();
-    const updated = events.filter(ev => ev.id !== id);
-    setEvents(updated);
-    localStorage.setItem("calendar_events", JSON.stringify(updated));
+
+    try {
+      await fetch(`http://localhost:8080/api/calendar/${id}`, {
+        method: "DELETE"
+      });
+
+      // refresh from DB
+      fetchEvents();
+    } catch (err) {
+      console.error("Error deleting event", err);
+    }
   };
 
   const renderCalendarCells = () => {
@@ -69,7 +86,16 @@ export default function AdminCalendarPage() {
     }
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = new Date(year, month, day).toDateString();
-      const dayEvents = events.filter(e => new Date(e.date).toDateString() === dateStr && e.type === activeTab);
+      
+      const cellDate = new Date(year, month, day)
+        .toISOString()
+        .split("T")[0];
+
+      const dayEvents = events.filter(
+        e =>
+          e.date === cellDate &&
+          e.calendarType === activeTab
+      );
       const isToday = new Date().toDateString() === dateStr;
 
       cells.push(
@@ -97,6 +123,25 @@ export default function AdminCalendarPage() {
       );
     }
     return cells;
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/calendar/type/${activeTab}`);
+
+      if (!res.ok) {
+        console.error("API error:", res.status);
+        setEvents([]); // prevent crash
+        return;
+      }
+
+      const data = await res.json();
+
+      setEvents(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching events", err);
+      setEvents([]);
+    }
   };
 
   return (
