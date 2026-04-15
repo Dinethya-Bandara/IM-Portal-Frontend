@@ -13,10 +13,8 @@ export default function Profile() {
     const [user, setUser] = useState({
         name: "",
         email: "",
-        contact: "",
         role: "",
         batch: "",
-        position: "",
         about: "No description added yet",
         profileImage: "", // Base64 or URL
     });
@@ -26,32 +24,50 @@ export default function Profile() {
     const [tempImage, setTempImage] = useState("");
 
     useEffect(() => {
-        const savedUser = localStorage.getItem("user");
-        if (savedUser) {
-            try {
-                const parsed = JSON.parse(savedUser);
-                const merged = { ...user, ...parsed };
-                setUser(merged);
-                setTempName(merged.name);
-                setTempImage(merged.profileImage);
-            } catch (e) {
-                console.error("Failed to parse user data", e);
-            }
-        } else {
-            setTempName(user.name);
-            setTempImage(user.profileImage);
-        }
+        const personalEmail = JSON.parse(localStorage.getItem("user"))?.email;
+
+        fetch(`http://localhost:8080/api/profile?personalEmail=${personalEmail}`)
+            .then(res => res.json())
+            .then(data => {
+                setUser({
+                    name: data.fullName,
+                    email: data.email,
+                    role: data.role,
+                    batch: data.batch,
+                    profileImage: data.profileImage,
+                    about: "No description added yet"
+                });
+
+                setTempName(data.fullName);
+                setTempImage(data.profileImage);
+            })
+            .catch(err => console.error(err));
     }, []);
 
     const handleSave = () => {
-        const updatedUser = { ...user, name: tempName, profileImage: tempImage };
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+        const personalEmail = JSON.parse(localStorage.getItem("user"))?.email;
 
-        // Dispatch event to update Sidebar and TopHeader
-        window.dispatchEvent(new Event("userProfileUpdate"));
+        fetch(`http://localhost:8080/api/profile?personalEmail=${personalEmail}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                fullName: tempName,
+                profileImage: tempImage
+            })
+        })
+        .then(() => {
+            setUser(prev => ({
+                ...prev,
+                name: tempName,
+                profileImage: tempImage
+            }));
 
-        setIsEditing(false);
+            setIsEditing(false);
+            window.dispatchEvent(new Event("userProfileUpdate"));
+        })
+        .catch(err => console.error(err));
     };
 
     const handleImageChange = (e) => {
@@ -195,13 +211,6 @@ export default function Profile() {
                                     className="bg-slate-50 cursor-not-allowed italic"
                                 />
                                 <FormField
-                                    label="Contact Number *"
-                                    value={user.contact || ""}
-                                    disabled={true}
-                                    className="bg-slate-50 cursor-not-allowed italic"
-                                    placeholder="No contact added"
-                                />
-                                <FormField
                                     label="Role"
                                     value={user.role}
                                     disabled={true}
@@ -210,12 +219,6 @@ export default function Profile() {
                                 <FormField
                                     label="Batch"
                                     value={user.batch || "22/23"}
-                                    disabled={true}
-                                    className="bg-slate-50 cursor-not-allowed italic"
-                                />
-                                <FormField
-                                    label="Position"
-                                    value={user.position || (portalName === "Lecturer Portal" ? "Lecturer" : "Undergraduate")}
                                     disabled={true}
                                     className="bg-slate-50 cursor-not-allowed italic"
                                 />
