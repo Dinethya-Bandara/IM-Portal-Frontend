@@ -8,7 +8,7 @@ export default function AdminNotifications() {
   const [user, setUser] = useState({
     name: "Administrator",
     role: "Admin",
-    universityEmail: "admin@kln.ac.lk" 
+    universityEmail: "admin@gmail.com" 
   });
 
   const [notifications, setNotifications] = useState([]);
