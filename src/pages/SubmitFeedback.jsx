@@ -27,40 +27,52 @@ export default function SubmitFeedback() {
             try {
                 const parsed = JSON.parse(savedUser);
                 setUser(prev => ({ ...prev, ...parsed }));
-            } catch (e) { }
+            } catch (e) {}
         }
+    }, []);
 
-        const savedFeedbacks = localStorage.getItem("anonymous_feedbacks");
-        if (savedFeedbacks) {
-            const allData = JSON.parse(savedFeedbacks);
-            setAllFeedbacks(allData);
-            const mine = allData.filter(f => f.username === user.username);
-            setMyFeedbacks(mine);
-        }
+    useEffect(() => {
+        if (!user.username) return;
+
+        // get my feedbacks
+        fetch(`http://localhost:8080/api/feedback/my?username=${user.username}`)
+            .then(res => res.json())
+            .then(data => setMyFeedbacks(data));
+
+        // get all feedbacks (for lecturer view logic reuse)
+        fetch(`http://localhost:8080/api/feedback`)
+            .then(res => res.json())
+            .then(data => setAllFeedbacks(data));
+
     }, [user.username]);
 
     const isLecturer = user.role?.toLowerCase().includes("lecturer") || user.role?.toLowerCase().includes("hod") || user.role?.toLowerCase().includes("advisor");
     const portalName = isLecturer ? "Lecturer Portal" : "Student Portal";
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!feedback.trim()) {
             alert("Please write your feedback before submitting.");
             return;
         }
-        const newFeedback = {
-            id: Date.now(),
-            username: user.username,
-            name: user.name,
-            feedback: feedback,
-            timestamp: new Date().toLocaleString(),
-            anonymous: true
-        };
-        const updated = [...allFeedbacks, newFeedback];
-        setAllFeedbacks(updated);
-        setMyFeedbacks([...myFeedbacks, newFeedback]);
-        localStorage.setItem("anonymous_feedbacks", JSON.stringify(updated));
+
+        await fetch("http://localhost:8080/api/feedback", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams({
+                message: feedback,
+                username: user.username
+            })
+        });
+
         setFeedback("");
         setShowSuccessModal(true);
+
+        // refresh
+        fetch(`http://localhost:8080/api/feedback/my?username=${user.username}`)
+            .then(res => res.json())
+            .then(data => setMyFeedbacks(data));
     };
 
     const openDeleteModal = (id) => {
@@ -74,19 +86,24 @@ export default function SubmitFeedback() {
         setFeedbackToDelete(null);
     };
 
-    const handleDeleteForEveryone = () => {
-        const updated = allFeedbacks.filter(f => f.id !== feedbackToDelete);
-        setAllFeedbacks(updated);
-        setMyFeedbacks(myFeedbacks.filter(f => f.id !== feedbackToDelete));
-        localStorage.setItem("anonymous_feedbacks", JSON.stringify(updated));
+    const handleDeleteForEveryone = async () => {
+        await fetch(`http://localhost:8080/api/feedback/${feedbackToDelete}`, {
+            method: "DELETE"
+        });
+
+        setMyFeedbacks(prev => prev.filter(f => f.id !== feedbackToDelete));
+        setAllFeedbacks(prev => prev.filter(f => f.id !== feedbackToDelete));
+
         setShowDeleteModal(false);
         setFeedbackToDelete(null);
     };
 
-    const handleLecturerDelete = (id) => {
-        const updated = allFeedbacks.filter(f => f.id !== id);
-        setAllFeedbacks(updated);
-        localStorage.setItem("anonymous_feedbacks", JSON.stringify(updated));
+    const handleLecturerDelete = async (id) => {
+        await fetch(`http://localhost:8080/api/feedback/${id}`, {
+            method: "DELETE"
+        });
+
+        setAllFeedbacks(prev => prev.filter(f => f.id !== id));
     };
 
     return (
@@ -124,7 +141,7 @@ export default function SubmitFeedback() {
                                 <textarea
                                     value={feedback}
                                     onChange={(e) => setFeedback(e.target.value)}
-                                    placeholder="Write your feedback here... Be specific and constructive"
+                                    placeholder="Write your feedback here..."
                                     rows="8"
                                     className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-slate-700 outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 resize-none"
                                 />
@@ -135,8 +152,8 @@ export default function SubmitFeedback() {
                                     <div className="space-y-4">
                                         {myFeedbacks.map(fb => (
                                             <div key={fb.id} className="bg-slate-50 border border-slate-100 rounded-xl p-4 relative group">
-                                                <div className="text-xs text-slate-400 mb-2">{fb.timestamp}</div>
-                                                <p className="text-sm text-slate-700">{fb.feedback}</p>
+                                                <div className="text-xs text-slate-400 mb-2">{new Date(fb.createdAt).toLocaleString()}</div>
+                                                <p className="text-sm text-slate-700">{fb.message}</p>
                                                 <button onClick={() => openDeleteModal(fb.id)} className="absolute top-3 right-3 p-2 rounded-lg text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">Delete</button>
                                             </div>
                                         ))}
@@ -150,10 +167,10 @@ export default function SubmitFeedback() {
                                     {allFeedbacks.map(fb => (
                                         <div key={fb.id} className="bg-slate-50 border border-slate-100 rounded-xl p-5 relative group">
                                             <div className="flex justify-between items-start mb-3">
-                                                <div className="text-xs text-slate-400">Anonymous Student • {fb.timestamp}</div>
+                                                <div className="text-xs text-slate-400">Anonymous Student • {new Date(fb.createdAt).toLocaleString()}</div>
                                                 <button onClick={() => handleLecturerDelete(fb.id)} className="p-2 rounded-lg text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">Delete</button>
                                             </div>
-                                            <p className="text-sm text-slate-700">{fb.feedback}</p>
+                                            <p className="text-sm text-slate-700">{fb.message}</p>
                                         </div>
                                     ))}
                                 </div>
