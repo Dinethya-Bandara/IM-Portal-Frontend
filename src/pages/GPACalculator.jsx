@@ -14,6 +14,7 @@ export default function GPACalculator() {
 
     // Grade scale reference
     const gradeScale = [
+        { grade: "A+", points: 4.0 },
         { grade: "A", points: 4.0 },
         { grade: "A-", points: 3.7 },
         { grade: "B+", points: 3.3 },
@@ -25,19 +26,6 @@ export default function GPACalculator() {
         { grade: "D+", points: 1.3 },
         { grade: "D", points: 1.0 },
         { grade: "F", points: 0.0 }
-    ];
-
-    // Mock module database
-    const moduleDatabase = [
-        { code: "IM2103", name: "Statistics for Industrial Management" },
-        { code: "IM2002", name: "Quality Management" },
-        { code: "IM2003", name: "Supply Chain Management" },
-        { code: "IM2004", name: "Operations Management" },
-        { code: "IM2005", name: "Financial Management" },
-        { code: "IM1001", name: "Introduction to Management" },
-        { code: "IM1002", name: "Business Mathematics" },
-        { code: "INTE2303", name: "Artificial Intelligence" },
-        { code: "INTE2293", name: "Software Architecture" },
     ];
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -61,22 +49,31 @@ export default function GPACalculator() {
     }, [user.username]);
 
     useEffect(() => {
-        if (searchQuery.trim()) {
-            const results = moduleDatabase.filter(m =>
-                m.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                m.name.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-            setSearchResults(results);
-        } else {
-            setSearchResults([]);
-        }
+        const fetchModules = async () => {
+            if (!searchQuery.trim()) {
+                setSearchResults([]);
+                return;
+            }
+
+            try {
+                const res = await fetch(`http://localhost:8080/api/modules/search?query=${searchQuery}`);
+                const data = await res.json();
+                setSearchResults(
+                    data.map(m => ({
+                        id: m.id,
+                        code: m.courseCode,
+                        name: m.moduleName,
+                        credits: m.credits
+                    }))
+                );
+            } catch (err) {
+                console.error("Error fetching modules", err);
+            }
+        };
+
+        fetchModules();
     }, [searchQuery]);
 
-    const getCredits = (moduleCode) => {
-        // Last digit is the number of credits
-        const lastChar = moduleCode.charAt(moduleCode.length - 1);
-        return parseInt(lastChar) || 3; // Default to 3 if not a number
-    };
 
     const addModule = (module) => {
         if (selectedModules.find(m => m.code === module.code)) {
@@ -86,7 +83,7 @@ export default function GPACalculator() {
 
         const newModule = {
             ...module,
-            credits: getCredits(module.code),
+            credits: module.credits,
             grade: "B" // Default grade
         };
 
@@ -191,12 +188,12 @@ export default function GPACalculator() {
                                     <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-10">
                                         {searchResults.map(module => (
                                             <button
-                                                key={module.code}
+                                                key={module.id}
                                                 onClick={() => addModule(module)}
                                                 className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
                                             >
-                                                <div className="font-semibold text-slate-800 text-sm">{module.code} - {module.name}</div>
-                                                <div className="text-xs text-slate-500 mt-1">{getCredits(module.code)} Credits</div>
+                                                <div className="font-semibold text-slate-800 text-sm">{module.code || "N/A"} - {module.name || "No Name"}</div>
+                                                <div className="text-xs text-slate-500 mt-1">{module.credits} Credits</div>
                                             </button>
                                         ))}
                                     </div>
