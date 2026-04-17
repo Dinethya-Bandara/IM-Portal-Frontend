@@ -110,7 +110,7 @@ export default function CalendarPage() {
             setNewEvent({ title: "", description: "", color: "" });
             setShowAddModal(false);
 
-            fetchEvents(); // 🔥 refresh UI
+            fetchEvents();
         } catch (err) {
             console.error("Error saving event", err);
         }
