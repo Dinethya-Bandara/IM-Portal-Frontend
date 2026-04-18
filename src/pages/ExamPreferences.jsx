@@ -117,17 +117,27 @@ export default function ExamPreferences() {
     const handleStudentSubmit = async () => {
 
         if (alreadySubmitted || isSubmitting) return;
-        
+
         if (selectedModules.length === 0) {
             setSubmitStatus("error");
             return;
         }
         setIsSubmitting(true);
         setSubmitStatus(null);
+
+        const levelDigit = user.level ? parseInt(user.level.replace(/\D/g, "")) : null;
+
+        if (!levelDigit) {
+            alert("User level is missing. Please login again.");
+            return;
+        }
+
+        console.log("User Level:", user.level);
+        
         const payload = {
             studentEmail: user.email,
             batch: user.batch,
-            level: user.level ? parseInt(user.level.replace(/\D/g, "")) : 0,
+            level: levelDigit,
             gap,
             satAvailable: weekends.saturday,
             sunAvailable: weekends.sunday,
