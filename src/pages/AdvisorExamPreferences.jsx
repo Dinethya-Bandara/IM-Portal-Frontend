@@ -23,6 +23,7 @@ export default function AdvisorExamPreferences() {
     const [selectedAnalysisModule, setSelectedAnalysisModule] = useState("");
     const [submissions, setSubmissions] = useState([]);
 
+
     // Load user from localStorage
     useEffect(() => {
         const saved = localStorage.getItem("user");
@@ -44,6 +45,8 @@ export default function AdvisorExamPreferences() {
     // Fetch submissions when filters change
     useEffect(() => {
         const advisorLevelDigit = levelFilter.replace(/\D/g, "");
+        const payload = { level: advisorLevelDigit, semester: semesterFilter };
+        console.log("Submitting data:", payload);
         fetch(`http://localhost:8080/api/exam-preferences?level=${advisorLevelDigit}&semester=${semesterFilter}`)
             .then(res => {
                 if (!res.ok) throw new Error("Failed to fetch");
@@ -56,7 +59,7 @@ export default function AdvisorExamPreferences() {
     const advisorLevelDigit = levelFilter.replace(/\D/g, "");
 
     const advisorModules = allDbModules.filter(m => {
-        const match = m.code.match(/^[A-Z]+\s*(\d)(\d)\d{2}(\d)$/i);
+        const match = m.courseCode.match(/^[A-Z]+\s*(\d)(\d)\d{2}(\d)$/i);
         return match && match[1] === advisorLevelDigit && match[2] === semesterFilter;
     });
 
@@ -64,13 +67,13 @@ export default function AdvisorExamPreferences() {
     const calculatePreferenceMatrix = () => {
         const matrix = {};
         advisorModules.forEach(m => {
-            matrix[m.code] = {};
-            for (let i = 1; i <= advisorModules.length; i++) matrix[m.code][i] = 0;
+            matrix[m.courseCode] = {};
+            for (let i = 1; i <= advisorModules.length; i++) matrix[m.courseCode][i] = 0;
         });
 
         submissions.forEach(sub => {
             sub.modules.forEach((m) => {
-                const modCode = m.moduleCode;
+                const modCode = m.courseCode;
                 const place = m.priority;
                 if (matrix[modCode] && matrix[modCode][place] !== undefined) {
                     matrix[modCode][place]++;
@@ -82,10 +85,10 @@ export default function AdvisorExamPreferences() {
 
     const preferenceMatrix = calculatePreferenceMatrix();
 
-    // Greedy Order Algorithm
     const calculateSuggestedOrder = () => {
         if (!advisorModules.length) return [];
-        const availableModules = new Set(advisorModules.map(m => m.code));
+
+        const availableModules = new Set(advisorModules.map(m => m.courseCode));
         const availablePlaces = new Set(advisorModules.map((_, i) => i + 1));
         const assignments = [];
 
@@ -106,14 +109,21 @@ export default function AdvisorExamPreferences() {
             }
 
             if (bestModule && bestPlace) {
-                const modData = advisorModules.find(m => m.code === bestModule);
-                assignments.push({ place: bestPlace, moduleCode: bestModule, moduleName: modData?.name || "", votes: maxVotes });
+                const modData = advisorModules.find(m => m.courseCode === bestModule);
+                assignments.push({
+                    place: bestPlace,
+                    moduleCode: bestModule,
+                    moduleName: modData?.moduleName || "",
+                    votes: maxVotes
+                });
+
                 availableModules.delete(bestModule);
                 availablePlaces.delete(bestPlace);
             } else {
                 break;
             }
         }
+
         return assignments.sort((a, b) => a.place - b.place);
     };
 
@@ -155,7 +165,7 @@ export default function AdvisorExamPreferences() {
                         {/* Filters Row */}
                         <div className="flex flex-wrap gap-4 mb-10">
                             <select
-                                className="w-[200px] bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9InN0YXRlLTRMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI2IDkgMTIgMTUgMTggOSI+PC9wb2x5bGluZT48L3N2Zz4=')] bg-[length:16px] bg-[95%_center] bg-no-repeat"
+                                className="w-[200px] bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[length:16px] bg-[95%_center] bg-no-repeat"
                                 value={levelFilter}
                                 onChange={(e) => setLevelFilter(e.target.value)}
                             >
@@ -165,7 +175,7 @@ export default function AdvisorExamPreferences() {
                                 <option value="Level 4">Level 4</option>
                             </select>
                             <select
-                                className="w-[200px] bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9InN0YXRlLTRMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI2IDkgMTIgMTUgMTggOSI+PC9wb2x5bGluZT48L3N2Zz4=')] bg-[length:16px] bg-[95%_center] bg-no-repeat"
+                                className="w-[200px] bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[length:16px] bg-[95%_center] bg-no-repeat"
                                 value={semesterFilter}
                                 onChange={(e) => setSemesterFilter(e.target.value)}
                             >
@@ -189,7 +199,7 @@ export default function AdvisorExamPreferences() {
                                 >
                                     <option value="" disabled>Select a module to analyze</option>
                                     {advisorModules.map(m => (
-                                        <option key={m.code} value={m.code}>{m.code} - {m.name}</option>
+                                        <option key={m.courseCode} value={m.courseCode}>{m.courseCode} - {m.moduleName}</option>
                                     ))}
                                 </select>
 
@@ -219,7 +229,7 @@ export default function AdvisorExamPreferences() {
                                     Mathematically optimal order automatically generated from highest student priority consensus.
                                 </p>
                                 <div className="flex-1 space-y-3">
-                                    {suggestedOrder.length > 0 ? suggestedOrder.map(item => (
+                                    {suggestedOrder.length > 0 ? suggestedOrder.map((item, idx) => (
                                         <div key={item.moduleCode} className="flex items-center gap-4 bg-white p-4 rounded-xl border border-teal-100 shadow-[0_2px_10px_-3px_rgba(20,184,166,0.1)]">
                                             <span className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold shadow-md shadow-teal-600/30">
                                                 {item.place}
