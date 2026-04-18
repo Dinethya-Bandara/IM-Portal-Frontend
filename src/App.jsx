@@ -25,6 +25,7 @@ import RegPassword from "./pages/RegPassword";
 import CalendarPage from "./pages/CalendarPage";
 import TimetablePage from "./pages/TimetablePage";
 import ExamPreferences from "./pages/ExamPreferences";
+import AdvisorExamPreferences from "./pages/AdvisorExamPreferences";
 import SubmitFeedback from "./pages/SubmitFeedback";
 import Directory from "./pages/Directory";
 import GPACalculator from "./pages/GPACalculator";
@@ -150,6 +151,7 @@ export default function App() {
       <Route path="/calendar" element={<CalendarPage />} />
       <Route path="/timetable" element={<TimetablePage />} />
       <Route path="/exam-preferences" element={<ExamPreferences />} />
+      <Route path="/advisor-exam-preferences" element={<AdvisorExamPreferences />} />
       <Route path="/feedback" element={<SubmitFeedback />} />
       <Route path="/directory" element={<Directory />} />
       <Route path="/gpa-calculator" element={<GPACalculator />} />

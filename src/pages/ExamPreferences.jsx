@@ -1,205 +1,181 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/Sidebar";
 import TopHeader from "../components/TopHeader";
 import PrimaryButton from "../components/PrimaryButton";
-import FormField from "../components/FormField";
 import { useNavigate } from "react-router-dom";
-import { can, getPortal } from "../auth/permissions";
 import { getModules } from "../api/moduleApi";
 
 export default function ExamPreferences() {
     const navigate = useNavigate();
+
     const [user, setUser] = useState({
-        name: "Dinethya Samuduni",
-        role: "Undergraduate",
-        position: "Undergraduate",
-        batch: "2022/2023",
-        username: "bandara-im22117",
-        level: "Level 2"
+        name: "",
+        email: "",
+        role: "",
+        position: "",
+        batch: "",
+        username: "",
+        level: ""
     });
 
-    // Removed static dbModules array; replaced with dynamic fetch
-
-    // Student Form State
-    const [modules, setModules] = useState([]);
+    const [allDbModules, setAllDbModules] = useState([]);
+    const [selectedModules, setSelectedModules] = useState([]);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showDropdown, setShowDropdown] = useState(false);
     const [gap, setGap] = useState("3 days");
     const [weekends, setWeekends] = useState({ saturday: false, sunday: false });
+    const [submitStatus, setSubmitStatus] = useState(null); // null | "success" | "error"
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
-    // Advisor Data & Filters
-    const [levelFilter, setLevelFilter] = useState("Level 2"); 
-    const [semesterFilter, setSemesterFilter] = useState("1");
-    const [allDbModules, setAllDbModules] = useState([]);
-    const [selectedAnalysisModule, setSelectedAnalysisModule] = useState("");
-    const [analysisMode, setAnalysisMode] = useState("byPlace"); // 'byModule' or 'byPlace'
-    const [selectedAnalysisPlace, setSelectedAnalysisPlace] = useState("1");
+    const searchRef = useRef(null);
+    const dropdownRef = useRef(null);
 
-    const mockAdvisorSubmissions = [
-        { id: 101, name: "Student A", studentId: "IM/2022/010", level: "Level 2", semester: "1", modules: ["INTE 21243", "INTE 21253", "INTE 21262"], gap: "1 day", weekends: ["Sat"], submittedDate: "10/12/2025" },
-        { id: 102, name: "Student B", studentId: "IM/2022/011", level: "Level 2", semester: "1", modules: ["INTE 21253", "INTE 21243", "INTE 21262"], gap: "2 days", weekends: [], submittedDate: "10/14/2025" },
-        { id: 103, name: "Student C", studentId: "IM/2022/012", level: "Level 2", semester: "1", modules: ["INTE 21243", "INTE 21253", "INTE 21262"], gap: "3 days", weekends: ["Sun"], submittedDate: "10/15/2025" },
-        { id: 104, name: "Student D", studentId: "IM/2022/013", level: "Level 2", semester: "1", modules: ["INTE 21262", "INTE 21253", "INTE 21243"], gap: "2 days", weekends: ["Sat", "Sun"], submittedDate: "10/15/2025" },
-        { id: 105, name: "Student E", studentId: "IM/2022/014", level: "Level 2", semester: "1", modules: ["INTE 21243", "INTE 21262", "INTE 21253"], gap: "1 day", weekends: [], submittedDate: "10/16/2025" },
-        { id: 106, name: "Student F", studentId: "IM/2023/001", level: "Level 1", semester: "1", modules: ["INTE 11243"], gap: "1 day", weekends: [], submittedDate: "10/10/2025" },
-    ];
-
+    // Load user from localStorage
     useEffect(() => {
-        let currentUser = user;
-        const savedUser = localStorage.getItem("user");
-        if (savedUser) {
+        const saved = localStorage.getItem("user");
+        if (saved) {
             try {
-                const parsed = JSON.parse(savedUser);
+                const parsed = JSON.parse(saved);
                 setUser(prev => ({ ...prev, ...parsed }));
-                currentUser = { ...user, ...parsed };
-            } catch (e) { }
-        }
 
-        const fetchAndFilterModules = async () => {
-            let loadedModules = [];
-            try {
-                loadedModules = await getModules();
-            } catch (error) {
-                console.warn("Backend not found, using fallback modules");
-                loadedModules = [
-                    { id: 1, moduleCode: "INTE 21243", moduleName: "Operations Management" },
-                    { id: 2, moduleCode: "INTE 21253", moduleName: "Supply Chain Management" },
-                    { id: 3, moduleCode: "INTE 21262", moduleName: "Statistics for Management" },
-                    { id: 4, moduleCode: "INTE 11243", moduleName: "Introduction to IT" },
-                    { id: 5, moduleCode: "INTE 31243", moduleName: "Advanced Databases" },
-                ];
+                checkSubmission(parsed.email);
+
+            } catch (e) {
+                console.error("Failed to parse user", e);
             }
-            
-            const standardized = loadedModules.map(m => ({
-                id: m.id || m.moduleId,
-                code: m.moduleCode || m.code,
-                name: m.moduleName || m.name
-            }));
-            setAllDbModules(standardized);
-            filterAndSetStudentModules(standardized, currentUser.level);
-        };
-
-        const filterAndSetStudentModules = (allModules, studentLevelStr) => {
-            const studentLevelDigit = studentLevelStr ? studentLevelStr.replace(/\D/g, "") : "2";
-            const currentSemester = "1"; 
-            const filtered = allModules.filter(m => {
-                const code = m.code || "";
-                const match = code.match(/^[A-Z]+\s*(\d)(\d)\d{2}(\d)$/i);
-                return match && match[1] === studentLevelDigit && match[2] === currentSemester;
-            });
-            setModules(filtered);
-        };
-
-        fetchAndFilterModules();
+        }
     }, []);
 
-    // Logic for Advisor View Data
-    const advisorLevelDigit = levelFilter.replace(/\D/g, "");
-    const advisorModules = allDbModules.filter(m => {
-        const match = m.code.match(/^[A-Z]+\s*(\d)(\d)\d{2}(\d)$/i);
-        return match && match[1] === advisorLevelDigit && match[2] === semesterFilter;
-    });
+    // Load all modules from API
+    useEffect(() => {
+        getModules().then(data => setAllDbModules(data)).catch(console.error);
+    }, []);
 
     useEffect(() => {
-        if (advisorModules.length > 0 && !advisorModules.find(m => m.code === selectedAnalysisModule)) {
-            setSelectedAnalysisModule(advisorModules[0].code);
-        } else if (advisorModules.length === 0 && selectedAnalysisModule !== "") {
-            setSelectedAnalysisModule("");
+        const submitted = localStorage.getItem("examSubmitted");
+        if (submitted === "true") {
+            setAlreadySubmitted(true);
         }
+    }, []);
 
-        if (advisorModules.length > 0 && parseInt(selectedAnalysisPlace) > advisorModules.length) {
-            setSelectedAnalysisPlace("1");
-        }
-    }, [advisorModules, selectedAnalysisModule, selectedAnalysisPlace]);
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handle = (e) => {
+            if (
+                dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+                searchRef.current && !searchRef.current.contains(e.target)
+            ) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handle);
+        return () => document.removeEventListener("mousedown", handle);
+    }, []);
 
-    const mappedSubmissions = mockAdvisorSubmissions.filter(s => s.level === levelFilter && s.semester === semesterFilter);
+    // Already-added module codes
+    const selectedCodes = new Set(selectedModules.map(m => m.courseCode));
 
-    // Build the Preference Matrix
-    const calculatePreferenceMatrix = () => {
-        const matrix = {};
-        advisorModules.forEach(m => {
-            matrix[m.code] = {};
-            for (let i = 1; i <= advisorModules.length; i++) matrix[m.code][i] = 0;
-        });
+    // Filter modules by search query, excluding already-added ones
+    const filteredModules = allDbModules.filter(m => {
+        if (selectedCodes.has(m.courseCode)) return false;
 
-        mappedSubmissions.forEach(sub => {
-            sub.modules.forEach((modCode, idx) => {
-                if (matrix[modCode] && matrix[modCode][idx + 1] !== undefined) {
-                    matrix[modCode][idx + 1]++;
-                }
-            });
-        });
-        return matrix;
+        const q = searchQuery.toLowerCase();
+
+        return (
+            m.courseCode?.toLowerCase().includes(q) ||
+            m.moduleName?.toLowerCase().includes(q)
+        );
+    });
+
+    const addModule = (module) => {
+        const alreadyExists = selectedModules.some(
+            m => m.courseCode === module.courseCode
+        );
+
+        if (alreadyExists) return; //stop duplicate
+
+        setSelectedModules(prev => [...prev, module]);
+        setSearchQuery("");
+        setShowDropdown(false);
     };
 
-    const preferenceMatrix = calculatePreferenceMatrix();
-
-    // Greedy Order Algorithm
-    const calculateSuggestedOrder = () => {
-        if (!advisorModules.length) return [];
-        const availableModules = new Set(advisorModules.map(m => m.code));
-        const availablePlaces = new Set(advisorModules.map((_, i) => i + 1));
-        const assignments = []; 
-
-        while (availableModules.size > 0 && availablePlaces.size > 0) {
-            let maxVotes = -1;
-            let bestModule = null;
-            let bestPlace = null;
-
-            for (const mod of availableModules) {
-                for (const place of availablePlaces) {
-                    const votes = preferenceMatrix[mod][place];
-                    // Also tiebreaker could be applied here if needed, but simple strict > is fine
-                    if (votes > maxVotes) {
-                        maxVotes = votes;
-                        bestModule = mod;
-                        bestPlace = place;
-                    }
-                }
-            }
-
-            if (bestModule && bestPlace) {
-                const modData = advisorModules.find(m => m.code === bestModule);
-                assignments.push({ place: bestPlace, moduleCode: bestModule, moduleName: modData?.name || "", votes: maxVotes });
-                availableModules.delete(bestModule);
-                availablePlaces.delete(bestPlace);
-            } else {
-                break;
-            }
-        }
-        return assignments.sort((a,b) => a.place - b.place);
+    const removeModule = (courseCode) => {
+        setSelectedModules(prev =>
+            prev.filter(m => m.courseCode !== courseCode)
+        );
     };
-
-    const suggestedOrder = calculateSuggestedOrder();
-
-    const portal = getPortal(user.role || user.position);
-    const isAdvisor = can(user.position || user.role, "lecturer.viewExamPreferences");
-    const isStudent = portal === "STUDENT";
 
     const moveModule = (index, direction) => {
-        const newModules = [...modules];
+        const newModules = [...selectedModules];
         const targetIndex = index + direction;
         if (targetIndex < 0 || targetIndex >= newModules.length) return;
         [newModules[index], newModules[targetIndex]] = [newModules[targetIndex], newModules[index]];
-        setModules(newModules);
+        setSelectedModules(newModules);
     };
 
-    const handleStudentSubmit = () => {
-        alert("Preferences submitted successfully!");
-        navigate("/student-dashboard");
+    const handleStudentSubmit = async () => {
+
+        if (alreadySubmitted || isSubmitting) return;
+        
+        if (selectedModules.length === 0) {
+            setSubmitStatus("error");
+            return;
+        }
+        setIsSubmitting(true);
+        setSubmitStatus(null);
+        const payload = {
+            studentEmail: user.email,
+            batch: user.batch,
+            level: user.level ? parseInt(user.level.replace(/\D/g, "")) : 0,
+            gap,
+            satAvailable: weekends.saturday,
+            sunAvailable: weekends.sunday,
+            modules: selectedModules.map((m, index) => ({
+                courseCode: m.courseCode,
+                priority: index + 1
+            }))
+        };
+
+        try {
+            const res = await fetch("http://localhost:8080/api/exam-preferences", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error("Server error");
+            
+            //SUCCESS → lock submission
+            setSubmitStatus("success");
+            setAlreadySubmitted(true);
+
+            //persist even after refresh
+            localStorage.setItem("examSubmitted", "true");
+
+        } catch (err) {
+            console.error(err);
+            setSubmitStatus("error");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    if (!isAdvisor && !isStudent) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-slate-50">
-                <div className="text-center p-10 bg-white rounded-2xl shadow-sm border border-slate-100">
-                    <h2 className="text-xl font-bold text-slate-800 mb-2">Access Denied</h2>
-                    <p className="text-slate-500 mb-6">You do not have permission to view this page.</p>
-                    <button onClick={() => navigate(-1)} className="px-6 py-2 bg-teal-600 text-white rounded-lg font-bold">Go Back</button>
-                </div>
-            </div>
-        );
-    }
+    const ordinalLabel = (n) => {
+        if (n === 1) return "1st";
+        if (n === 2) return "2nd";
+        if (n === 3) return "3rd";
+        return `${n}th`;
+    };
 
-    const portalName = isStudent ? "Student Portal" : "Lecturer Portal";
+    const checkSubmission = async (email) => {
+        try {
+            const res = await fetch(`http://localhost:8080/api/exam-preferences/check?email=${email}`);
+            const data = await res.json();
+            setAlreadySubmitted(data.submitted);
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     return (
         <div className="flex min-h-screen bg-[#b9d9d7] overflow-hidden">
@@ -207,7 +183,7 @@ export default function ExamPreferences() {
                 userName={user.name}
                 role={user.role}
                 position={user.position}
-                portalName={portalName}
+                portalName="Student Portal"
                 onLogout={() => { localStorage.clear(); navigate("/"); }}
             />
 
@@ -215,247 +191,279 @@ export default function ExamPreferences() {
                 <TopHeader
                     title="Exam Preferences"
                     username={user.name}
-                    subtitle={portalName}
+                    subtitle="Student Portal"
                 />
 
                 <main className="p-10 flex-1 overflow-y-auto no-scrollbar">
                     <div className="bg-white rounded-[2rem] shadow-sm p-12 max-w-[1400px] mx-auto border border-white/20">
 
-                        {isStudent ? (
-                            // STUDENT VIEW: SUBMISSION FORM
-                            <div>
-                                <div className="flex items-start gap-4 mb-10">
-                                    <div className="mt-1 flex items-center justify-center bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-slate-800">
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Submit Exam Preferences</h2>
-                                        <p className="text-sm font-semibold text-slate-400 mt-0.5">Help us schedule your exams by ordering modules and setting preferences</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-10">
-                                    {/* Level */}
-                                    <div className="max-w-md">
-                                        <FormField
-                                            label="Current Level"
-                                            value={user.level || "Level 2"}
-                                            disabled={true}
-                                            className="bg-slate-50 border border-slate-100 rounded-xl px-5 text-slate-600 font-bold"
-                                        />
-                                    </div>
-
-                                    {/* Module Ordering */}
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-1">Preferred Exam Order</label>
-                                        <p className="text-xs text-slate-400 font-bold mb-4 italic">Arrange modules in the order you wish to take exams (Top = First)</p>
-                                        <div className="border border-slate-100 rounded-2xl overflow-hidden divide-y divide-slate-50 bg-white">
-                                            {modules.map((m, idx) => (
-                                                <div key={m.id} className="flex items-center justify-between p-5 hover:bg-slate-50/50 transition-colors">
-                                                    <div className="flex items-center gap-4">
-                                                        <span className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">{idx + 1}</span>
-                                                        <div>
-                                                            <div className="text-sm font-bold text-slate-800">{m.code}</div>
-                                                            <div className="text-[11px] font-bold text-slate-400">{m.name}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => moveModule(idx, -1)} disabled={idx === 0} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors disabled:opacity-20">
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path></svg>
-                                                        </button>
-                                                        <button onClick={() => moveModule(idx, 1)} disabled={idx === modules.length - 1} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-slate-800 transition-colors disabled:opacity-20">
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Gap */}
-                                    <div className="max-w-md text-black">
-                                        <FormField
-                                            variant="select"
-                                            label="Preferred Gap Between Exams"
-                                            value={gap}
-                                            onChange={(e) => setGap(e.target.value)}
-                                            options={["1 day", "2 days", "3 days"]}
-                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-
-                                    {/* Weekends */}
-                                    <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-3">Weekend Availability</label>
-                                        <div className="flex gap-6">
-                                            <label className="flex items-center gap-3 cursor-pointer group">
-                                                <input type="checkbox" checked={weekends.saturday} onChange={e => setWeekends({ ...weekends, saturday: e.target.checked })} className="w-5 h-5 rounded-md border-slate-200 text-teal-600 focus:ring-teal-500" />
-                                                <span className="text-sm font-bold text-slate-500 group-hover:text-slate-800 transition-colors">Available on Saturdays</span>
-                                            </label>
-                                            <label className="flex items-center gap-3 cursor-pointer group">
-                                                <input type="checkbox" checked={weekends.sunday} onChange={e => setWeekends({ ...weekends, sunday: e.target.checked })} className="w-5 h-5 rounded-md border-slate-200 text-teal-600 focus:ring-teal-500" />
-                                                <span className="text-sm font-bold text-slate-500 group-hover:text-slate-800 transition-colors">Available on Sundays</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-6 border-t border-slate-50">
-                                        <PrimaryButton text="Submit Preferences" className="px-10 py-3 rounded-xl shadow-lg shadow-teal-600/20" onClick={handleStudentSubmit} />
-                                    </div>
-                                </div>
+                        {/* Page Header */}
+                        <div className="flex items-start gap-4 mb-10">
+                            <div className="mt-1 flex items-center justify-center bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-slate-800">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
                             </div>
-                        ) : (
-                            // ADVISOR VIEW: DASHBOARD (KEEP PREVIOUS)
                             <div>
-                                {/* Header Box */}
-                                <div className="flex items-start gap-4 mb-10">
-                                    <div className="mt-1 flex items-center justify-center bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-slate-800">
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Exam Preferences Dashboard</h2>
-                                        <p className="text-sm font-semibold text-slate-400 mt-0.5">Filter, analyze, and automatically generate optimal exam orders.</p>
-                                    </div>
-                                </div>
+                                <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Submit Exam Preferences</h2>
+                                <p className="text-sm font-semibold text-slate-400 mt-0.5">Search and add modules, then arrange them in your preferred exam order</p>
+                            </div>
+                        </div>
 
-                                {/* Filters Row */}
-                                <div className="flex flex-wrap gap-4 mb-10">
-                                    <select
-                                        className="w-[200px] bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9InN0YXRlLTRMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI2IDkgMTIgMTUgMTggOSI+PC9wb2x5bGluZT48L3N2Zz4=')] bg-[length:16px] bg-[95%_center] bg-no-repeat"
-                                        value={levelFilter}
-                                        onChange={(e) => setLevelFilter(e.target.value)}
-                                    >
-                                        <option value="Level 1">Level 1</option>
-                                        <option value="Level 2">Level 2</option>
-                                        <option value="Level 3">Level 3</option>
-                                        <option value="Level 4">Level 4</option>
-                                    </select>
-                                    <select
-                                        className="w-[200px] bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9InN0YXRlLTRMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSI2IDkgMTIgMTUgMTggOSI+PC9wb2x5bGluZT48L3N2Zz4=')] bg-[length:16px] bg-[95%_center] bg-no-repeat"
-                                        value={semesterFilter}
-                                        onChange={(e) => setSemesterFilter(e.target.value)}
-                                    >
-                                        <option value="1">Semester 1</option>
-                                        <option value="2">Semester 2</option>
-                                    </select>
-                                </div>
+                        <div className="space-y-10">
 
-                                {/* Module Analysis & Matrix */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                                    {/* Selected Module Stats */}
-                                    <div className="bg-slate-50 border border-slate-100 p-8 rounded-[1.5rem] shadow-sm">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-lg font-bold text-slate-800">Priority Analysis</h3>
-                                            <div className="flex bg-slate-200 p-1 rounded-lg">
-                                                <button 
-                                                    onClick={() => setAnalysisMode("byModule")} 
-                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${analysisMode === "byModule" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                                                >
-                                                    By Module
-                                                </button>
-                                                <button 
-                                                    onClick={() => setAnalysisMode("byPlace")} 
-                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${analysisMode === "byPlace" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-                                                >
-                                                    By Place
-                                                </button>
-                                            </div>
-                                        </div>
+                            {/* ── Module Search & Add ── */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Search & Add Modules</label>
+                                <p className="text-xs text-slate-400 font-bold mb-4 italic">Type a module code or name to search, then click to add it to your list</p>
 
-                                        {analysisMode === "byModule" ? (
-                                            <>
-                                                <select
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 mb-6"
-                                                    value={selectedAnalysisModule}
-                                                    onChange={(e) => setSelectedAnalysisModule(e.target.value)}
-                                                >
-                                                    <option value="" disabled>Select a module to analyze</option>
-                                                    {advisorModules.map(m => (
-                                                        <option key={m.code} value={m.code}>{m.code} - {m.name}</option>
-                                                    ))}
-                                                </select>
-
-                                                {selectedAnalysisModule && preferenceMatrix[selectedAnalysisModule] ? (
-                                                    <div className="space-y-3">
-                                                        {Object.entries(preferenceMatrix[selectedAnalysisModule]).map(([place, count]) => (
-                                                            <div key={place} className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-100">
-                                                                <span className="text-sm font-bold text-slate-500">{place}{place==='1'?'st':place==='2'?'nd':place==='3'?'rd':'th'} Priority</span>
-                                                                <span className="text-sm font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-md">{count} student{count !== 1 ? 's' : ''}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm font-bold text-slate-400">No data available for this selection.</p>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <select
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 mb-6"
-                                                    value={selectedAnalysisPlace}
-                                                    onChange={(e) => setSelectedAnalysisPlace(e.target.value)}
-                                                >
-                                                    {advisorModules.map((_, i) => {
-                                                        const p = i + 1;
-                                                        return <option key={p} value={p}>{p}{p===1?'st':p===2?'nd':p===3?'rd':'th'} Priority Place</option>
-                                                    })}
-                                                </select>
-
-                                                <div className="space-y-3">
-                                                    {[...advisorModules].sort((a, b) => {
-                                                        const countA = preferenceMatrix[a.code]?.[selectedAnalysisPlace] || 0;
-                                                        const countB = preferenceMatrix[b.code]?.[selectedAnalysisPlace] || 0;
-                                                        return countB - countA;
-                                                    }).map(m => {
-                                                        const count = preferenceMatrix[m.code] ? preferenceMatrix[m.code][selectedAnalysisPlace] || 0 : 0;
-                                                        return (
-                                                            <div key={m.code} className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-100">
-                                                                <span className="text-sm font-bold text-slate-700">{m.code}</span>
-                                                                <span className="text-sm font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-md">{count} student{count !== 1 ? 's' : ''}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </>
-                                        )}
+                                <div className="relative max-w-xl">
+                                    {/* Search Input */}
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </span>
+                                        <input
+                                            ref={searchRef}
+                                            type="text"
+                                            placeholder="Search by module code or name…"
+                                            value={searchQuery}
+                                            onChange={e => { setSearchQuery(e.target.value); setShowDropdown(true); }}
+                                            onFocus={() => setShowDropdown(true)}
+                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                        />
                                     </div>
 
-                                    {/* Final Suggested Order */}
-                                    <div className="bg-teal-50/50 border border-teal-100 p-8 rounded-[1.5rem] shadow-sm flex flex-col">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <span className="p-2 bg-teal-100 text-teal-700 rounded-lg">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                            </span>
-                                            <h3 className="text-lg font-bold text-slate-800">Suggested Exam Order</h3>
-                                        </div>
-                                        <p className="text-xs font-bold text-slate-500 mb-6 leading-relaxed">
-                                            Mathematically optimal order automatically generated from highest student priority consensus.
-                                        </p>
-                                        <div className="flex-1 space-y-3">
-                                            {suggestedOrder.length > 0 ? suggestedOrder.map(item => (
-                                                <div key={item.moduleCode} className="flex items-center gap-4 bg-white p-4 rounded-xl border border-teal-100 shadow-[0_2px_10px_-3px_rgba(20,184,166,0.1)]">
-                                                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold shadow-md shadow-teal-600/30">
-                                                        {item.place}
-                                                    </span>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="text-sm font-bold text-slate-800 truncate">{item.moduleCode}</div>
-                                                        <div className="text-[11px] font-bold text-slate-400 truncate">{item.moduleName}</div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Winning Votes</span>
-                                                        <span className="text-sm font-bold text-teal-600">{item.votes}</span>
-                                                    </div>
+                                    {/* Dropdown Results */}
+                                    {showDropdown && searchQuery.length > 0 && (
+                                        <div
+                                            ref={dropdownRef}
+                                            className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-200/60 overflow-hidden z-50 max-h-64 overflow-y-auto"
+                                        >
+                                            {filteredModules.length === 0 ? (
+                                                <div className="p-4 text-center text-sm text-slate-400 font-semibold">
+                                                    No modules found matching "{searchQuery}"
                                                 </div>
-                                            )) : (
-                                                <div className="h-full flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-teal-200 rounded-xl">
-                                                    <p className="text-sm font-bold text-teal-600/60">No modules found.</p>
-                                                </div>
+                                            ) : (
+                                                filteredModules.map(m => (
+                                                    <button
+                                                        key={m.id}
+                                                        onClick={() => addModule(m)}
+                                                        className="w-full flex items-center gap-4 px-5 py-3.5 hover:bg-teal-50 transition-colors text-left group border-b border-slate-50 last:border-0"
+                                                    >
+                                                        <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-teal-100 flex items-center justify-center transition-colors">
+                                                            <svg className="w-3.5 h-3.5 text-slate-500 group-hover:text-teal-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                                                            </svg>
+                                                        </span>
+                                                        <div className="min-w-0">
+                                                            <div className="text-sm font-bold text-slate-800 group-hover:text-teal-700 transition-colors">{m.moduleName}</div>
+                                                            <div className="text-xs text-slate-400 font-semibold truncate">{m.courseCode}</div>
+                                                        </div>
+                                                    </button>
+                                                ))
                                             )}
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
-                        )}
+
+                            {/* ── Module Ordering List ── */}
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-sm font-bold text-slate-700">Preferred Exam Order</label>
+                                    {selectedModules.length > 0 && (
+                                        <span className="text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">
+                                            {selectedModules.length} module{selectedModules.length !== 1 ? "s" : ""} added
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-xs text-slate-400 font-bold mb-4 italic">Arrange modules in your preferred exam order using the arrows — top = first priority</p>
+
+                                {selectedModules.length === 0 ? (
+                                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+                                        <div className="mx-auto w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-3">
+                                            <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                            </svg>
+                                        </div>
+                                        <p className="text-sm font-bold text-slate-400">No modules added yet</p>
+                                        <p className="text-xs text-slate-300 font-semibold mt-1">Use the search bar above to find and add modules</p>
+                                    </div>
+                                ) : (
+                                    <div className="border border-slate-100 rounded-2xl overflow-hidden divide-y divide-slate-50 bg-white shadow-sm">
+                                        {selectedModules.map((m, idx) => (
+                                            <div
+                                                key={m.id}
+                                                className="flex items-center justify-between px-5 py-4 hover:bg-slate-50/60 transition-colors group"
+                                            >
+                                                {/* Priority Badge + Info */}
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-[11px] font-extrabold text-white shadow-md shadow-teal-500/25">
+                                                            {idx + 1}
+                                                        </span>
+                                                        <span className="text-[9px] font-bold text-slate-300 mt-0.5 uppercase tracking-wider">
+                                                            {ordinalLabel(idx + 1)}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-bold text-slate-800">{m.courseCode}</div>
+                                                        <div className="text-[11px] font-semibold text-slate-400">{m.moduleName}</div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Controls */}
+                                                <div className="flex items-center gap-2">
+                                                    {/* Move Up */}
+                                                    <button
+                                                        onClick={() => moveModule(idx, -1)}
+                                                        disabled={idx === 0}
+                                                        title="Move up"
+                                                        className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 15l7-7 7 7" />
+                                                        </svg>
+                                                    </button>
+
+                                                    {/* Move Down */}
+                                                    <button
+                                                        onClick={() => moveModule(idx, 1)}
+                                                        disabled={idx === selectedModules.length - 1}
+                                                        title="Move down"
+                                                        className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    </button>
+
+                                                    {/* Divider */}
+                                                    <div className="w-px h-6 bg-slate-100 mx-1" />
+
+                                                    {/* Delete */}
+                                                    <button
+                                                        onClick={() => removeModule(m.courseCode)}
+                                                        title="Remove module"
+                                                        className="p-2 rounded-lg bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* ── Gap Preference ── */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-3">Preferred Gap Between Exams</label>
+                                <div className="flex gap-3 flex-wrap">
+                                    {["1 day", "2 days", "3 days"].map(opt => (
+                                        <button
+                                            key={opt}
+                                            onClick={() => setGap(opt)}
+                                            className={`px-5 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                                                gap === opt
+                                                    ? "bg-teal-600 text-white border-teal-600 shadow-md shadow-teal-500/25"
+                                                    : "bg-slate-50 text-slate-500 border-slate-100 hover:border-teal-300 hover:text-teal-600"
+                                            }`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* ── Weekend Availability ── */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-3">Weekend Availability</label>
+                                <div className="flex gap-6 flex-wrap">
+                                    {[
+                                        { key: "saturday", label: "Available on Saturdays" },
+                                        { key: "sunday",   label: "Available on Sundays"   }
+                                    ].map(({ key, label }) => (
+                                        <label key={key} className="flex items-center gap-3 cursor-pointer group">
+                                            <div
+                                                onClick={() => setWeekends(prev => ({ ...prev, [key]: !prev[key] }))}
+                                                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer ${
+                                                    weekends[key]
+                                                        ? "bg-teal-600 border-teal-600"
+                                                        : "border-slate-200 bg-white group-hover:border-teal-300"
+                                                }`}
+                                            >
+                                                {weekends[key] && (
+                                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <span className="text-sm font-bold text-slate-500 group-hover:text-slate-800 transition-colors select-none">
+                                                {label}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* ── Status Messages ── */}
+                            {submitStatus === "success" && (
+                                <div className="flex items-center gap-3 bg-teal-50 border border-teal-100 rounded-xl px-5 py-4">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-teal-700">Preferences Submitted Successfully!</p>
+                                        <p className="text-xs text-teal-500 font-semibold mt-0.5">Your exam order has been saved and will be considered during scheduling.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {submitStatus === "error" && selectedModules.length === 0 && (
+                                <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-5 py-4">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-sm font-bold text-red-600">Please add at least one module before submitting.</p>
+                                </div>
+                            )}
+
+                            {submitStatus === "error" && selectedModules.length > 0 && (
+                                <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-5 py-4">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-sm font-bold text-red-600">Failed to submit. Please check your connection and try again.</p>
+                                </div>
+                            )}
+
+                            {/* ── Submit ── */}
+                            <div className="pt-6 border-t border-slate-50 flex items-center gap-4">
+                                <PrimaryButton
+                                    text={alreadySubmitted ? "Already Submitted" : (isSubmitting ? "Submitting…" : "Submit Preferences")}
+                                    onClick={handleStudentSubmit}
+                                    disabled={isSubmitting || alreadySubmitted}
+                                />
+                                {selectedModules.length > 0 && (
+                                    <span className="text-xs font-bold text-slate-400">
+                                        Submitting {selectedModules.length} module{selectedModules.length !== 1 ? "s" : ""} in your preferred order
+                                    </span>
+                                )}
+                            </div>
+
+                        </div>
                     </div>
                 </main>
             </div>
