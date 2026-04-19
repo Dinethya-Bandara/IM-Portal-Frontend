@@ -165,6 +165,9 @@ export default function AdminTimetablePage() {
         "Something went wrong";
 
       setErrorMessage(message);
+
+      const today = new Date();
+    today.setHours(0, 0, 0, 0);
     }
   };
 
@@ -389,7 +392,13 @@ export default function AdminTimetablePage() {
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
               <h3 className="text-xl font-bold text-slate-900 mb-6">Add Exam Schedule</h3>
               <div className="space-y-4">
-                <input type="date" className="w-full px-4 py-3 border-2 border-slate-400 rounded-lg text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-teal-500" value={examForm.date} onChange={e => setExamForm({ ...examForm, date: e.target.value })} />
+                <input
+                  type="date"
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full px-4 py-3 border-2 border-slate-400 rounded-lg text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  value={examForm.date}
+                  onChange={e => setExamForm({ ...examForm, date: e.target.value })}
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <input className="px-4 py-3 border-2 border-slate-400 rounded-lg text-sm text-slate-900 font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Day" value={examForm.day} onChange={e => setExamForm({ ...examForm, day: e.target.value })} />
                   <input className="px-4 py-3 border-2 border-slate-400 rounded-lg text-sm text-slate-900 font-medium placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Time" value={examForm.time} onChange={e => setExamForm({ ...examForm, time: e.target.value })} />

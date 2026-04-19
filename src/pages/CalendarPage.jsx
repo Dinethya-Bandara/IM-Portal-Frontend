@@ -151,6 +151,7 @@ export default function CalendarPage() {
         // Days
         for (let day = 1; day <= daysInMonth; day++) {
             const currentCellDate = new Date(year, month, day);
+            const isPast = isPastDate(currentCellDate);
 
             const dateStr = currentCellDate.toDateString();
 
@@ -170,8 +171,12 @@ export default function CalendarPage() {
             cells.push(
                 <div
                     key={day}
-                    onClick={() => openAddModal(day)}
-                    className={`border border-slate-200 h-32 relative group transition-colors overflow-hidden flex flex-col ${canEdit ? 'cursor-pointer hover:bg-slate-50' : ''} ${isToday ? 'bg-blue-50/30' : 'bg-white'}`}
+                    onClick={() => {
+                        if (!isPast) openAddModal(day);
+                    }}
+                    className={`border border-slate-200 h-32 relative group transition-colors overflow-hidden flex flex-col 
+                    ${canEdit && !isPast ? 'cursor-pointer hover:bg-slate-50' : 'cursor-not-allowed bg-slate-100'} 
+                    ${isToday ? 'bg-blue-50/30' : 'bg-white'}`}
                 >
                     <span className={`text-sm font-semibold p-2 ${isToday ? 'text-blue-600' : 'text-slate-700'}`}>{day}</span>
 
@@ -202,6 +207,16 @@ export default function CalendarPage() {
             );
         }
         return cells;
+    };
+
+    const isPastDate = (date) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+
+        return d < today;
     };
 
 
@@ -308,7 +323,7 @@ export default function CalendarPage() {
                                         className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none text-slate-800"
                                         value={newEvent.title}
                                         onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
-                                        placeholder="e.g. Mid Semester Exam"
+                                        placeholder="Event title"
                                         autoFocus
                                     />
                                 </div>

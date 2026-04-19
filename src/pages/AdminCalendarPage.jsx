@@ -79,13 +79,25 @@ export default function AdminCalendarPage() {
     }
   };
 
+  const isPastDate = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+
+    return d < today;
+  };
+
   const renderCalendarCells = () => {
     const cells = [];
     for (let i = 0; i < startDay; i++) {
       cells.push(<div key={`empty-${i}`} className="bg-slate-50 border border-slate-200 h-32" />);
     }
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = new Date(year, month, day).toDateString();
+      const currentCellDate = new Date(year, month, day);
+      const dateStr = currentCellDate.toDateString();
+      const isPast = isPastDate(currentCellDate);
       
       const cellDate = new Date(year, month, day)
         .toISOString()
@@ -99,8 +111,11 @@ export default function AdminCalendarPage() {
       const isToday = new Date().toDateString() === dateStr;
 
       cells.push(
-        <div key={day} onClick={() => openAddModal(day)}
-          className={`border border-slate-200 h-32 relative group transition-colors overflow-hidden flex flex-col cursor-pointer hover:bg-slate-50 ${isToday ? 'bg-blue-50/30' : 'bg-white'}`}
+        <div key={day} onClick={() => {if (!isPast) openAddModal(day);}}
+          className={`border border-slate-200 h-32 relative group transition-colors overflow-hidden flex flex-col
+            ${!isPast ? 'cursor-pointer hover:bg-slate-50' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
+            ${isToday ? 'bg-blue-50/30' : 'bg-white'}
+          `}
         >
           <span className={`text-sm font-semibold p-2 ${isToday ? 'text-blue-600' : 'text-slate-700'}`}>{day}</span>
           <div className="flex-1 flex flex-col gap-0.5 overflow-y-auto">
@@ -110,11 +125,17 @@ export default function AdminCalendarPage() {
                 <div key={evt.id} className={`text-xs p-1.5 shadow-sm min-h-[40px] relative group/evt ${colorClass} hover:brightness-95 transition`}>
                   <div className="font-bold leading-tight">{evt.title}</div>
                   {evt.description && <div className="text-[10px] opacity-90 leading-tight mt-0.5 line-clamp-2">{evt.description}</div>}
-                  <button onClick={(e) => handleDeleteEvent(e, evt.id)}
-                    className="absolute top-1 right-1 p-0.5 rounded-full bg-black/10 hover:bg-black/20 text-black/60 opacity-0 group-hover/evt:opacity-100 transition"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
+                  {!isPast && (
+                    <button
+                      onClick={(e) => handleDeleteEvent(e, evt.id)}
+                      className="absolute top-1 right-1 p-0.5 rounded-full bg-black/10 hover:bg-black/20 text-black/60 opacity-0 group-hover/evt:opacity-100 transition"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                  
                 </div>
               );
             })}
