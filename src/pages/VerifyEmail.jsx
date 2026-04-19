@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import PrimaryButton from "../components/PrimaryButton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 
 export default function ForgotPasswordOtp() {
   const navigate = useNavigate(); 
@@ -8,6 +9,9 @@ export default function ForgotPasswordOtp() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputsRef = useRef([]);
   const otpValue = otp.join("");
+
+  const location = useLocation();
+  const email = location.state?.email;
 
   useEffect(() => {
     inputsRef.current?.[0]?.focus?.();
@@ -40,6 +44,24 @@ export default function ForgotPasswordOtp() {
 
   const onResend = () => console.log("Resend OTP");
   const onVerify = () => console.log("Verify code:", otpValue);
+
+  const handleVerifyOtp = async () => {
+    try {
+      const response = await axios.post("http://localhost:8080/api/users/useOtp", {email: email, otp: otpValue});
+
+      const message = response.data;
+
+      if (message === "OTP Accepted!") {
+        navigate("/reset-password", { state: { email } });
+      } else {
+        alert(message);
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong. Please try again.");
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#A7D9D6] flex items-center justify-center px-4 py-10">
@@ -113,7 +135,7 @@ export default function ForgotPasswordOtp() {
             <PrimaryButton
               text="Verify Code"
               className="w-full py-3"
-              onClick={() => navigate("/reset-password")}
+              onClick={handleVerifyOtp}
               disabled={otpValue.length !== 6}
             />
           </div>

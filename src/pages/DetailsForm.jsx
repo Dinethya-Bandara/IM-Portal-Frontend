@@ -36,7 +36,16 @@ export default function DetailsForm() {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        
+
+        //FIRST NAME & LAST NAME VALIDATION
+        if (name === "firstName" || name === "lastName") {
+            const regex = /^[A-Za-z\s]*$/;
+
+            if (!regex.test(value)) {
+                return; // 🚨 this must stop execution completely
+            }
+        }
+            
         // Enforce 10 digit limit for telephone/contact number
         if (name === "contactNumber") {
             const digits = value.replace(/\D/g, "");
@@ -202,6 +211,8 @@ export default function DetailsForm() {
                                 <input 
                                     type="text" 
                                     name="firstName"
+                                    value={formData.firstName}
+                                    maxLength={20}
                                     required
                                     placeholder="Enter first name"
                                     className="px-5 py-3.5 rounded-xl bg-slate-50 border border-slate-100 focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all text-slate-800 text-sm font-medium"
@@ -213,6 +224,8 @@ export default function DetailsForm() {
                                 <input 
                                     type="text" 
                                     name="lastName"
+                                    value={formData.lastName}
+                                    maxLength={20}
                                     required
                                     placeholder="Enter last name"
                                     className="px-5 py-3.5 rounded-xl bg-slate-50 border border-slate-100 focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-500/10 outline-none transition-all text-slate-800 text-sm font-medium"
