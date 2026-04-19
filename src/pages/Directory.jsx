@@ -72,8 +72,25 @@ export default function Directory() {
     const canAddToStudents = can(currentEffectiveRole, "student.editEventCalendar");
 
     const handleAddEntry = async () => {
+
+        if (!/^[A-Za-z\s]+$/.test(formData.name)) {
+            return alert("Name can only contain letters and spaces");
+        }
+
         if (!formData.name) return alert("Please fill Name");
         if (!formData.email) return alert("Please fill Email");
+        if (activeTab === "staff") {
+            // Staff (lecturers): only gmail or kln
+            if (!/^[^\s@]+@(gmail\.com|kln\.ac\.lk)$/.test(formData.email)) {
+                return alert("Email must be @gmail.com or @kln.ac.lk");
+            }
+        } else {
+            // Students
+            if (!/^[^\s@]+@(stu\.kln\.ac\.lk|gmail\.com)$/.test(formData.email)) {
+                return alert("Student email must be @stu.kln.ac.lk or @gmail.com");
+            }
+        }
+
         if (!formData.position) return alert("Please fill Position");
 
         if (formData.phone) {
@@ -237,7 +254,14 @@ export default function Directory() {
                                     className="w-full border border-slate-200 p-3 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all text-slate-800 placeholder-slate-400"
                                     placeholder={activeTab === "staff" ? "Enter Your Name" : "Enter Your Name"}
                                     value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    onChange={e => {
+                                        const value = e.target.value;
+
+                                        // Allow only letters and spaces
+                                        if (/^[A-Za-z\s]*$/.test(value)) {
+                                            setFormData({ ...formData, name: value });
+                                        }
+                                    }}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -255,7 +279,10 @@ export default function Directory() {
                                     className="w-full border border-slate-200 p-3 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all text-slate-800 placeholder-slate-400"
                                     placeholder={activeTab === "staff" ? "Enter Your Email Address" : "Enter Your Email Address"}
                                     value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                    onChange={e => {
+                                        const value = e.target.value.trim();
+                                        setFormData({ ...formData, email: value });
+                                    }}
                                 />
                             </div>
 

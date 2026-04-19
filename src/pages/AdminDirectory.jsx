@@ -49,7 +49,24 @@ export default function AdminDirectory() {
 
   const handleAddEntry = async () => {
     if (!formData.name) return alert("Please fill Name");
+    
+    if (!/^[A-Za-z\s]+$/.test(formData.name)) {
+      return alert("Name can only contain letters and spaces");
+    }
     if (!formData.email) return alert("Please fill Email");
+
+    if (activeTab === "staff") {
+      // Staff → gmail OR kln
+      if (!/^[^\s@]+@(gmail\.com|kln\.ac\.lk)$/.test(formData.email)) {
+        return alert("Staff email must be @gmail.com or @kln.ac.lk");
+      }
+    } else {
+      // Students → gmail OR stu.kln
+      if (!/^[^\s@]+@(gmail\.com|stu\.kln\.ac\.lk)$/.test(formData.email)) {
+        return alert("Student email must be @gmail.com or @stu.kln.ac.lk");
+      }
+    }
+
     if (!formData.position) return alert("Please fill Position");
     if (formData.phone) {
       if (!/^\d{10}$/.test(formData.phone)) {
@@ -209,13 +226,24 @@ export default function AdminDirectory() {
                   <input className="w-full border border-slate-200 p-3 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-teal-500 outline-none transition-all text-slate-800 placeholder-slate-400"
                     placeholder={f.placeholder} value={formData[f.key]} inputMode={f.key === "phone" ? "numeric" : "text"}
                     onChange={e => {
+                      let value = e.target.value;
+
                       if (f.key === "phone") {
-                        const value = e.target.value.replace(/\D/g, ""); // remove non-digits
-                        if (value.length <= 10) {
-                          setFormData({ ...formData, phone: value });
-                        }
+                        value = value.replace(/\D/g, "");
+                        if (value.length > 10) return;
+                        setFormData({ ...formData, phone: value });
                       } else {
-                        setFormData({ ...formData, [f.key]: e.target.value });
+                        // Name validation
+                        if (f.key === "name") {
+                          if (!/^[A-Za-z\s]*$/.test(value)) return;
+                        }
+
+                        // Email trim
+                        if (f.key === "email") {
+                          value = value.trim();
+                        }
+
+                        setFormData({ ...formData, [f.key]: value });
                       }
                     }}
                     />
