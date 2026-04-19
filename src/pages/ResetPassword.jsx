@@ -28,9 +28,31 @@ export default function ResetPassword() {
       navigate("/forgot-password");
       return;
     }
-    try {
-      console.log("Sending:", form.newPassword);
 
+    const password = form.newPassword;
+
+    const errors = [];
+
+    //Strong password regex
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+    if (!passwordRegex.test(password)) {
+      errors.push(
+        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
+      );
+    }
+
+    if (form.newPassword !== form.confirmNewPassword) {
+      errors.push("Passwords do not match.");
+    }
+
+    if (errors.length > 0) {
+      alert(errors.join("\n"));
+      return;
+    }
+
+    try {
       const response = await axios.post(
         "http://localhost:8080/api/users/reset-password",
         {
@@ -40,7 +62,6 @@ export default function ResetPassword() {
       );
 
       alert(response.data);
-
       navigate("/reset-success");
 
     } catch (error) {
