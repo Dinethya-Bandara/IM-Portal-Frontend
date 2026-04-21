@@ -34,6 +34,16 @@ export function can(role, permission) {
   if (ADMIN_ROLES.map(normalize).includes(r)) return true;
 
   switch (permission) {
+
+    //COMMON (shared pages)
+    case "common.view":
+      return (
+        STUDENT_VIEW_ROLES.map(normalize).includes(r) ||
+        LECTURER_ROLES.map(normalize).includes(r) ||
+        JUNIOR_STAFF_ROLES.map(normalize).includes(r) ||
+        ADMIN_ROLES.map(normalize).includes(r)
+      );
+
     // Student portal
     case "student.view":
       return STUDENT_VIEW_ROLES.map(normalize).includes(r);

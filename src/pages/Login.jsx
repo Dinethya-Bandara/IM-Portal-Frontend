@@ -51,6 +51,7 @@ export default function Login() {
         batch: data?.batch || data?.user?.batch || "",
         position: data?.position || data?.user?.position || "",
         role, 
+        level: data?.level || data?.user?.level || "",
       };
 
       // Store
