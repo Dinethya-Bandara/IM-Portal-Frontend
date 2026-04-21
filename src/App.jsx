@@ -17,7 +17,7 @@ import AdminDirectory from "./pages/AdminDirectory";
 import AdminNotifications from "./pages/AdminNotifications";
 import AdminCalendarPage from "./pages/AdminCalendarPage";
 import AdminTimetablePage from "./pages/AdminTimetablePage";
-import AdminReports from "./pages/AdminReports";
+//import AdminReports from "./pages/AdminReports";
 import DetailsForm from "./pages/DetailsForm";
 import AdminUserApprovals from "./pages/AdminUserApprovals";
 
@@ -126,14 +126,14 @@ export default function App() {
         }
       />
 
-      <Route
+      {/* <Route
         path="/admin-reports"
         element={
           <RequirePermission permission="admin.view">
             <AdminReports />
           </RequirePermission>
         }
-      />
+      /> */}
 
       <Route
         path="/admin-approvals"
@@ -147,19 +147,88 @@ export default function App() {
       {/* Publicly accessible details form */}
       <Route path="/details-form" element={<DetailsForm />} />
 
-      {/* Student portal pages (you can protect them too later) */}
-      <Route path="/calendar" element={<CalendarPage />} />
-      <Route path="/timetable" element={<TimetablePage />} />
-      <Route path="/exam-preferences" element={<ExamPreferences />} />
-      <Route path="/advisor-exam-preferences" element={<AdvisorExamPreferences />} />
-      <Route path="/feedback" element={<SubmitFeedback />} />
-      <Route path="/directory" element={<Directory />} />
-      <Route path="/gpa-calculator" element={<GPACalculator />} />
-      <Route path="/notifications" element={<Notifications />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/lecturer-feedback" element={<LecturerFeedback />} />
-      <Route path="/lecturer-profile" element={<LecturerProfile />} />
-      <Route path="/junior-staff-profile" element={<JuniorStaffProfile />} />
+      {/* Student portal pages */}
+      <Route path="/calendar" element={
+        <RequirePermission permission="common.view">
+          <CalendarPage />
+        </RequirePermission>
+      } />
+
+      <Route path="/timetable" element={
+        <RequirePermission permission="common.view">
+          <TimetablePage />
+        </RequirePermission>
+      } />
+
+      <Route path="/exam-preferences" element={
+        <RequirePermission permission="student.view">
+          <ExamPreferences />
+        </RequirePermission>
+      } />
+
+      <Route path="/advisor-exam-preferences" element={
+        <RequirePermission permission="lecturer.view">
+          <AdvisorExamPreferences />
+        </RequirePermission>
+      } />
+
+      <Route
+        path="/feedback"
+        element={
+          <RequirePermission permission="student.sendFeedback">
+            <SubmitFeedback />
+          </RequirePermission>
+        }
+      />
+      
+      <Route path="/directory" element={
+        <RequirePermission permission="common.view">
+          <Directory />
+        </RequirePermission>
+      } />
+
+      <Route
+        path="/gpa-calculator"
+        element={
+          <RequirePermission permission="student.view">
+            <GPACalculator />
+          </RequirePermission>
+        }
+      />
+
+      <Route path="/notifications" element={
+        <RequirePermission permission="common.view">
+          <Notifications />
+        </RequirePermission>
+      } />
+
+      <Route path="/profile" element={
+        <RequirePermission permission="student.view">
+          <Profile />
+        </RequirePermission>
+      } />
+
+      <Route
+        path="/lecturer-feedback"
+        element={
+          <RequirePermission permission="lecturer.viewStudentFeedback">
+            <LecturerFeedback />
+          </RequirePermission>
+        }
+      />
+
+      <Route path="/lecturer-profile" element={
+        <RequirePermission permission="lecturer.view">
+          <LecturerProfile />
+        </RequirePermission>
+      } />
+
+      <Route path="/junior-staff-profile" element={
+        <RequirePermission permission="staff.view">
+          <JuniorStaffProfile />
+        </RequirePermission>
+      } />
+
     </Routes>
   );
 }

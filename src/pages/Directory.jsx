@@ -73,8 +73,8 @@ export default function Directory() {
 
     const handleAddEntry = async () => {
 
-        if (!/^[A-Za-z\s]+$/.test(formData.name)) {
-            return alert("Name can only contain letters and spaces");
+        if (!/^[A-Za-z.\s]+$/.test(formData.name)) { 
+            return alert("Name can only contain letters, spaces, and dots");
         }
 
         if (!formData.name) return alert("Please fill Name");
@@ -258,7 +258,7 @@ export default function Directory() {
                                         const value = e.target.value;
 
                                         // Allow only letters and spaces
-                                        if (/^[A-Za-z\s]*$/.test(value)) {
+                                        if (/^[A-Za-z.\s]*$/.test(value)) {
                                             setFormData({ ...formData, name: value });
                                         }
                                     }}
